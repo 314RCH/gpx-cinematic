@@ -49,6 +49,48 @@ Les traces apparaissent dans une liste ; un clic rend une trace **active**.
   tomberait sur un repère de la trace active est masquée.
 - Une trace déjà chargée (même contenu) n'est pas ajoutée deux fois.
 
+## Onglets
+
+- **🎬 Vidéo** : l'aperçu 16:9 tel qu'il sera exporté, avec la lecture.
+- **🗺 Carte & photos** : la carte réelle, interactive (molette, glisser),
+  avec la trace active, les points de passage (déplaçables) et les photos ;
+  à droite, un bandeau vertical des vignettes. « 🖈 Placer sur la carte »
+  ouvre cet onglet en mode ajout de points.
+
+## Photos
+
+**📷 Dossier de photos** (section Photos) charge les images d'un dossier
+(jpg, png, webp ; heic seulement sous Safari). On peut aussi les glisser-déposer.
+La position et la date de prise de vue sont lues dans l'EXIF, y compris dans
+le bloc `eXIf` des PNG (captures et exports d'iPhone, par exemple).
+
+- **Sphère bleue** : photo géolocalisée par son GPS. **Sphère orange** :
+  position placée à la main. **« ? »** : pas de position. Un clic sur la
+  vignette « ? » (ou sur 📍 pour déplacer n'importe quelle photo) passe en mode
+  placement : le clic suivant sur la carte fixe sa position (Échap annule).
+- Une position placée à la main reste prioritaire sur le GPS. Pour une photo
+  qui a les deux, **⌖** (sur la vignette) revient au GPS, et le bouton
+  **⌖ Rétablir les positions GPS** le fait pour toutes.
+- Les positions placées à la main et les choix d'inclusion sont mémorisés
+  dans le navigateur **et** dans le projet `.json` (clé : nom, taille et date
+  du fichier), et reviennent quand on rouvre le même dossier. Les fichiers
+  photo eux-mêmes ne sont jamais modifiés.
+- Une photo est rattachée à la trace active si elle est à moins de
+  l'**écart max.** (200 m par défaut) ; sinon elle est marquée « hors trace ».
+  La case **vidéo** de chaque vignette choisit les photos à montrer.
+
+Dans la vidéo, chaque photo retenue apparaît **en haut à droite** dans un
+encadré façon tirage (légende : date de prise de vue et kilométrage), avec une
+sphère sur la carte à son emplacement et un point sur la mini-carte.
+
+**Ralentissement** : les photos proches (moins de max(150 m, 2 % de la trace)
+entre deux photos) forment un groupe. Chaque groupe de n photos ajoute
+≈ n × durée par photo × 0,85 s au parcours, réparti autour de la zone par une
+courbe douce : le point décélère, traverse lentement la zone pendant que les
+photos défilent, puis réaccélère. Sur la trace de test, 3 photos à Plan Lachat
+font passer le point de 266 m/s à ~50 m/s. La durée de la vidéo augmente
+d'autant ; la case « Ralentir le point aux photos » désactive l'effet.
+
 ## Projet (.json)
 
 **Enregistrer (.json)** produit un fichier unique qui contient toutes les
@@ -171,6 +213,8 @@ usage commercial ou intensif.
 ## Fichiers
 
 - `index.html` — toute l'application (interface, moteur d'animation, export)
+- `samples/photos/` — photos de test géolocalisées le long des traces (dont
+  un groupe de 3 à Plan Lachat, une hors trace et une sans GPS)
 - `samples/` — traces de test voisines : Télégraphe → Valloire, Valloire →
   Galibier, Galibier → Lautaret (pour essayer le chargement d'un dossier)
 - `*.gpxcine.json` — projets enregistrés (trace + réglages + points)
