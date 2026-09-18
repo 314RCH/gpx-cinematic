@@ -1,0 +1,4 @@
+.DS_Store
+# vidéos exportées
+*.mp4
+*.webm

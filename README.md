@@ -1,0 +1,176 @@
+# GPX Cinematic
+
+Application web (un seul fichier, sans build) qui transforme une trace GPX en
+animation vidéo 16:9 sur fond satellite, avec export MP4 directement depuis le
+navigateur.
+
+## Lancer
+
+```bash
+cd /Users/pierre/Projets/gpx2mp4 && python3 -m http.server 5178
+```
+
+puis ouvrir <http://localhost:5178/index.html>.
+
+Après une mise à jour de `index.html`, recharger la page sans cache
+(Cmd+Maj+R) : le petit serveur Python ne l'interdit pas au navigateur.
+
+Un mini-serveur est nécessaire : ouvrir `index.html` en double-clic peut être
+bloqué par le navigateur pour les requêtes réseau (tuiles de carte).
+
+Testé sur Chrome / Edge / Brave et Safari 17+ (l'export MP4 utilise WebCodecs).
+
+## Utilisation
+
+1. Déposer un fichier `.gpx` (ou cliquer sur la zone de dépôt).
+2. Régler titre, couleur, caméra et rythme dans le panneau de gauche.
+3. `Espace` (ou ▶) pour prévisualiser, la réglette pour se déplacer dans le temps.
+4. **Exporter en MP4** : rendu image par image en 1920×1080.
+
+## Déroulé de l'animation
+
+| Phase | Ce qui se passe |
+|---|---|
+| Intro | Vue globale de la trace, nord en haut, puis zoom vers le point de départ |
+| Parcours | Caméra inclinée qui suit le point courant et vise en avant, trace persistante |
+| Final | Dézoom vers la vue globale nord en haut + carte de fin (distance, D+, durée) |
+
+## Plusieurs traces
+
+On peut charger plusieurs GPX à la fois : sélection multiple, **📁 Ouvrir un
+dossier**, ou glisser-déposer d'un dossier entier (sous-dossiers compris).
+Les traces apparaissent dans une liste ; un clic rend une trace **active**.
+
+- La trace active est celle que la caméra suit et qui est **exportée**.
+- Chaque trace garde ses propres points de passage (départ, passages,
+  arrivée, couleurs de tronçons), son titre, son sous-titre et sa durée.
+- Les autres traces sont dessinées **en gris** quand elles sont dans le champ,
+  avec leurs départs et arrivées (repères gris). Une étiquette grise qui
+  tomberait sur un repère de la trace active est masquée.
+- Une trace déjà chargée (même contenu) n'est pas ajoutée deux fois.
+
+## Projet (.json)
+
+**Enregistrer (.json)** produit un fichier unique qui contient toutes les
+traces GPX chargées (avec leurs noms de fichier d'origine), leurs points de
+passage, la trace active et tous les réglages. Le projet est nommé d'après le
+dossier chargé (`samples/` → `samples.gpxcine.json`), sinon d'après le GPX
+quand il n'y en a qu'un. Les projets de l'ancien format (une seule trace)
+s'ouvrent toujours. **Ouvrir un projet** (ou un simple glisser-déposer du
+`.json`) restaure la session à l'identique, fond de carte et relief compris.
+
+## Points de passage
+
+- **Départ** et **Arrivée** sont nommés dans les deux champs en haut de la
+  section : les repères sont créés aux extrémités de la trace. Si le GPX
+  contient déjà un `<wpt>` à une extrémité, c'est son nom qui est repris.
+  Vider un champ retire le repère.
+- Les balises `<wpt>` du GPX sont importées et accrochées à la trace.
+- **Placer sur la carte** : la carte devient interactive (zoom/déplacement),
+  chaque clic ajoute un point accroché à la trace ; les repères se glissent.
+- **+ À la position** : ajoute un point à la position courante de la réglette.
+- Dans la liste, le champ de droite (km) repositionne le point le long de la trace.
+
+Au passage d'un point, son nom s'affiche en bandeau et son repère s'allume.
+
+### Couleur des tronçons
+
+La pastille de couleur d'un point fixe la couleur de la trace **à partir de ce
+point**, jusqu'au prochain point qui en définit une autre. Une pastille estompée
+signifie « couleur héritée » : le tronçon précédent continue. Le premier tronçon
+prend la couleur générale (section Habillage), et l'arrivée n'a pas de pastille
+puisqu'aucun tronçon n'en part. ↺ revient à la couleur héritée.
+
+La trace à venir (pointillés) prend déjà la couleur de ses tronçons. La couleur
+du tronçon en cours s'applique aussi au repère de position, à la distance
+affichée, au remplissage du profil altimétrique, au triangle de cap réel de la
+rose des vents et à la mini-carte. Elle est conservée
+dans le projet `.json`.
+
+## Rose des vents
+
+Un compas de marine en haut à gauche indique l'orientation de la carte : le
+cadran tourne avec elle (le N rouge pointe toujours le vrai nord), la ligne de
+foi blanche fixe en haut et le cap affiché dessous (« NE · 042° ») donnent la
+direction de la caméra. Un second triangle, dans la couleur du tronçon en cours,
+indique le **cap réel** (direction du déplacement sur la trace) : l'écart entre
+les deux triangles montre de combien la caméra, lissée, diffère de la route. Elle fait partie de l'image exportée ; case *Rose des vents*
+dans Habillage pour la masquer.
+
+## Mini-carte
+
+À droite de la rose des vents, une vignette **nord toujours en haut** montre
+l'emprise de la trace active agrandie de 20 % : fond de carte, trace complète,
+parcours effectué dans la couleur de chaque tronçon, position actuelle et un
+cône indiquant la direction de la caméra. Les autres traces chargées y
+figurent en gris si elles passent dans la zone. Elle apparaît quand le titre
+s'efface et disparaît pour la vue finale. Case *Mini-carte* dans Habillage.
+
+## Réglages notables
+
+- **Épaisseur de la trace active** (1 à 2,5×, défaut 1,5×) : la trace suivie
+  est dessinée plus épaisse que les traces inactives, qui restent fines et
+  grises.
+
+- **Zoom de suivi / Inclinaison** : hauteur et angle de la caméra.
+- **Position du point à l'écran** : place le point courant plus ou moins bas,
+  donc plus ou moins de visibilité « devant ».
+- **Anticipation** : distance de visée en avant pour calculer le cap.
+- **Lissage du cap** (m) : lissage géométrique de la direction de la trace.
+- **Douceur de la caméra** (s) : inertie de la rotation, appliquée dans le
+  domaine temporel de l'animation (filtre à phase nulle, donc sans retard de
+  la caméra sur la trajectoire).
+- **Rotation maximale** (°/s) : plafond de vitesse angulaire. C'est le réglage
+  déterminant dans les lacets de montagne : sur la trace de test, le cap brut
+  de la trace atteint 88 °/s alors que la caméra reste à 25 °/s.
+
+- **Liberté du point à l'écran** (%) : autorise le point à s'écarter du centre
+  (jusqu'à cette fraction de la largeur d'image). La caméra suit alors la ligne
+  moyenne du parcours au lieu de chaque lacet : dans une suite d'épingles, la
+  carte ne balaie plus d'un bord à l'autre. 0 % = point toujours au centre.
+  Sur la trace de test, à 15 % (défaut), l'accélération de la caméra est
+  divisée par 8,5 en moyenne et par 19 en pointe.
+
+Ces réglages dépendent de la durée du parcours : le cap est
+recalculé à chaque changement, et reste entièrement déterministe pour que
+l'export image par image soit identique à l'aperçu.
+- **Défilement** : vitesse constante, ou respect des horodatages du GPX
+  (les arrêts sont alors visibles).
+- **Relief 3D** : élévation issue des tuiles Terrarium (Mapzen/AWS).
+
+## Export
+
+- MP4 H.264 1920×1080, 24/30/60 i/s, 8 à 28 Mb/s.
+- Rendu déterministe : chaque image attend le chargement complet des tuiles,
+  aucune tuile floue ni saccade. L'export continue si la fenêtre passe en
+  arrière-plan.
+- **Préchargement des tuiles** (coché par défaut) : avant de rendre les
+  images, l'application parcourt la trajectoire de la caméra, relève les
+  tuiles dont chaque vue aura besoin et les télécharge en parallèle dans un
+  cache en mémoire. Le bouton **⚡ Précharger les tuiles** fait la même chose à
+  la demande, pour une lecture fluide dans l'aperçu.
+- Mesuré sur la trace de test : ~145 ms par image sans préchargement,
+  **~45–60 ms** après. Une vidéo de 54 s à 30 i/s (1 620 images) sort en
+  **1 min 41**, préchargement compris, au lieu d'environ 4 min 30.
+- Le cache garde jusqu'à 700 Mo de tuiles pour la session (état affiché sous le
+  bouton) ; les tuiles de relief n'ayant pas d'en-tête de cache HTTP, c'est
+  lui qui évite de les retélécharger.
+- Le fichier est assemblé en mémoire : prévoir ~2 Mo par seconde de vidéo.
+- Navigateur sans WebCodecs : repli sur une capture temps réel (WebM, ou MP4 sur Safari).
+
+## Sources de données
+
+- Fond satellite : Esri World Imagery (© Esri, Maxar, Earthstar Geographics)
+- Fond topographique : OpenTopoMap (© OpenStreetMap contributors)
+- Relief : tuiles Terrarium (Tilezen / Mapzen, hébergées par AWS)
+- Rendu : MapLibre GL JS · Multiplexage MP4 : mp4-muxer
+
+Usage personnel : vérifier les conditions d'utilisation de ces services pour un
+usage commercial ou intensif.
+
+## Fichiers
+
+- `index.html` — toute l'application (interface, moteur d'animation, export)
+- `samples/` — traces de test voisines : Télégraphe → Valloire, Valloire →
+  Galibier, Galibier → Lautaret (pour essayer le chargement d'un dossier)
+- `*.gpxcine.json` — projets enregistrés (trace + réglages + points)

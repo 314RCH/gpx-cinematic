@@ -1,0 +1,2486 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPX Cinematic — animation vidéo de traces GPX</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+<style>
+:root{
+  --bg:#0c0f14; --panel:#131822; --panel2:#1a2130; --line:#26304180;
+  --txt:#e7ecf5; --muted:#8b97ad; --accent:#ffd23f; --ok:#4ade80; --err:#f87171;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg); color:var(--txt); overflow:hidden;
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  display:grid; grid-template-columns:352px 1fr;
+}
+/* ---------- panneau ---------- */
+#panel{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;overflow-x:hidden}
+#panel::-webkit-scrollbar{width:10px}
+#panel::-webkit-scrollbar-thumb{background:#2a3446;border-radius:8px;border:3px solid var(--panel)}
+#brand{padding:16px 18px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:5}
+#brand h1{margin:0;font-size:15px;letter-spacing:.02em}
+#brand p{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
+.grp{padding:14px 18px;border-bottom:1px solid var(--line)}
+.grp h3{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+label{display:block;margin:0 0 9px;font-size:12px;color:var(--muted)}
+label>span.v{float:right;color:var(--txt);font-variant-numeric:tabular-nums}
+input[type=text],input[type=number],select{
+  width:100%;margin-top:4px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+  border-radius:7px;padding:7px 9px;font:inherit;font-size:12.5px;outline:none
+}
+input[type=text]:focus,input[type=number]:focus,select:focus{border-color:#3d5680}
+input[type=range]{width:100%;margin:7px 0 0;accent-color:var(--accent);height:4px}
+input[type=color]{width:100%;height:30px;margin-top:4px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px;cursor:pointer}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.chk{display:flex;align-items:center;gap:8px;color:var(--txt);font-size:12.5px;cursor:pointer}
+.chk input{accent-color:var(--accent);width:15px;height:15px;margin:0}
+button{
+  background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;
+  padding:8px 10px;font:inherit;font-size:12.5px;cursor:pointer;transition:.12s
+}
+button:hover:not(:disabled){background:#243044;border-color:#3d5680}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.pri{background:var(--accent);color:#1b1500;border-color:transparent;font-weight:650}
+button.pri:hover:not(:disabled){filter:brightness(1.08);background:var(--accent)}
+button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
+#drop{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:1.5px dashed #33415a;border-radius:10px;padding:18px 12px;text-align:center;
+  color:var(--muted);cursor:pointer;transition:.15s;margin:0
+}
+#drop:hover,#drop.hot{border-color:var(--accent);color:var(--txt);background:#ffd23f0d}
+#drop b{color:var(--txt);font-size:13px}
+#drop small{font-size:11px}
+#trackInfo{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.6}
+#trackInfo b{color:var(--txt);font-variant-numeric:tabular-nums}
+#trackList{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto}
+#trackList li{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 6px 6px 9px;cursor:pointer;font-size:12px}
+#trackList li:hover{border-color:#3d5680}
+#trackList li.on{border-color:var(--accent);background:#ffd23f12}
+#trackList .dot{flex:0 0 9px;height:9px;border-radius:50%;background:#7d8796}
+#trackList li.on .dot{background:var(--accent)}
+#trackList .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#trackList .ds{flex:0 0 auto;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}
+#trackList .del{flex:0 0 auto;padding:1px 6px;line-height:1;color:var(--muted);border-color:transparent;background:transparent;font-size:14px}
+#trackList .del:hover{color:var(--err);background:#f871711a}
+#wpList{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+#wpList li{display:flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 6px}
+#wpList input[type=text]{margin:0;border:none;background:transparent;padding:2px 4px;font-size:12px}
+#wpList .km{flex:0 0 58px}
+#wpList input.km{margin:0;border:none;background:transparent;padding:2px 2px;font-size:11.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+#wpList .pin{flex:0 0 auto;font-size:12px;opacity:.75;padding:0 2px}
+#wpList input.wc{flex:0 0 22px;width:22px;height:22px;margin:0;padding:0;border:none;border-radius:5px;background:none;cursor:pointer}
+#wpList input.wc::-webkit-color-swatch-wrapper{padding:0}
+#wpList input.wc::-webkit-color-swatch{border:2px solid #ffffff30;border-radius:5px}
+#wpList input.wc.inh{opacity:.35}
+#wpList input.wc.inh:hover{opacity:.8}
+#wpList .rst{flex:0 0 auto;padding:2px 4px;line-height:1;font-size:12px;color:var(--muted);border-color:transparent;background:transparent}
+#wpList .rst:hover{color:var(--txt)}
+#wpList .del{flex:0 0 auto;padding:3px 7px;line-height:1;color:var(--muted);border-color:transparent;background:transparent;font-size:15px}
+#wpList .del:hover{color:var(--err);background:#f871711a}
+.hint{font-size:11px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+.bar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:9px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .1s linear}
+/* ---------- scène ---------- */
+#stage{display:flex;flex-direction:column;min-width:0;padding:16px 18px;gap:12px}
+#vpWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#viewport{
+  position:relative;border-radius:12px;overflow:hidden;background:#05070a;
+  box-shadow:0 18px 60px #0009, 0 0 0 1px #ffffff12
+}
+#mapScaler{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:0 0}
+#map{width:100%;height:100%}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block}
+#viewport.editing #view{opacity:0;pointer-events:none}
+#viewport:not(.editing) #mapScaler{pointer-events:none}
+#editBadge{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;display:none;
+  background:#1a2130e6;border:1px solid #4d7ab8;color:#cfe2ff;padding:7px 14px;border-radius:99px;
+  font-size:12px;backdrop-filter:blur(8px)
+}
+#viewport.editing #editBadge{display:block}
+#transport{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+#transport button{width:38px;height:34px;display:grid;place-items:center;padding:0;font-size:13px}
+#scrub{flex:1;accent-color:var(--accent);height:4px}
+#clock{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:96px;text-align:right}
+#phase{font-size:11px;color:var(--muted);min-width:64px;text-transform:uppercase;letter-spacing:.06em}
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:#1a2130f2;border:1px solid var(--line);padding:10px 16px;border-radius:9px;font-size:12.5px;
+  pointer-events:none;transition:.25s;z-index:99;max-width:70vw
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--err);color:#ffd9d9}
+.maplibregl-ctrl-attrib{display:none!important}
+</style>
+</head>
+<body>
+<aside id="panel">
+  <div id="brand">
+    <h1>GPX Cinematic</h1>
+    <p>Animation vidéo 16:9 de traces GPX</p>
+  </div>
+
+  <section class="grp">
+    <label id="drop" for="file">
+      <b>Déposer un fichier .gpx</b>
+      <small>un ou plusieurs .gpx, un dossier ou un projet .json</small>
+      <input type="file" id="file" multiple accept=".gpx,.json,application/gpx+xml,text/xml,application/json" hidden>
+    </label>
+    <div class="row" style="margin-top:10px">
+      <button id="openDir">📁 Ouvrir un dossier</button>
+      <button id="clearTracks">Vider la liste</button>
+    </div>
+    <input type="file" id="dirInput" webkitdirectory multiple hidden>
+    <ul id="trackList"></ul>
+    <p class="hint" id="trackHint" style="display:none">La vidéo est générée pour la trace active (surlignée). Les autres apparaissent en gris, avec leurs départs et arrivées.</p>
+    <div id="trackInfo">Aucune trace chargée.</div>
+  </section>
+
+  <section class="grp">
+    <h3>Habillage</h3>
+    <label>Titre<input type="text" id="title" placeholder="Nom du parcours"></label>
+    <label>Sous-titre<input type="text" id="subtitle" placeholder="Date, lieu…"></label>
+    <div class="row">
+      <label>Couleur<input type="color" id="accent" value="#ffd23f"></label>
+      <label>Unités<select id="units"><option value="m">km / m</option><option value="i">mi / ft</option></select></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="showProfile" checked> Profil altimétrique</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="showCompass" checked> Rose des vents</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="showMinimap" checked> Mini-carte (nord en haut)</label>
+  </section>
+
+  <section class="grp">
+    <h3>Carte</h3>
+    <label>Fond de carte
+      <select id="basemap">
+        <option value="esri">Satellite (Esri)</option>
+        <option value="esrilab">Satellite + noms de lieux</option>
+        <option value="topo">Topographique (OpenTopoMap)</option>
+      </select>
+    </label>
+    <label>Épaisseur de la trace active <span class="v" id="trackWidthV">1,5×</span>
+      <input type="range" id="trackWidth" min="1" max="2.5" step="0.1" value="1.5"></label>
+    <label class="chk"><input type="checkbox" id="terrain" checked> Relief 3D (élévation des tuiles)</label>
+    <label>Exagération du relief <span class="v" id="exagV">1.4×</span>
+      <input type="range" id="exag" min="1" max="2.5" step="0.1" value="1.4">
+    </label>
+  </section>
+
+  <section class="grp">
+    <h3>Caméra</h3>
+    <label>Zoom de suivi <span class="v" id="zoomV">15.0</span>
+      <input type="range" id="zoom" min="11" max="18" step="0.1" value="15"></label>
+    <label>Inclinaison <span class="v" id="pitchV">62°</span>
+      <input type="range" id="pitch" min="0" max="80" step="1" value="62"></label>
+    <label>Position du point à l'écran <span class="v" id="anchorV">68 %</span>
+      <input type="range" id="anchor" min="50" max="88" step="1" value="68"></label>
+    <label>Anticipation (regard devant) <span class="v" id="aheadV">150 m</span>
+      <input type="range" id="ahead" min="30" max="600" step="10" value="150"></label>
+    <label>Lissage du cap <span class="v" id="smoothV">250 m</span>
+      <input type="range" id="smooth" min="30" max="900" step="10" value="250"></label>
+    <label>Douceur de la caméra <span class="v" id="inertiaV">1,2 s</span>
+      <input type="range" id="inertia" min="0" max="4" step="0.1" value="1.2"></label>
+    <label>Rotation maximale <span class="v" id="maxrotV">25 °/s</span>
+      <input type="range" id="maxrot" min="4" max="90" step="1" value="25"></label>
+    <label>Liberté du point à l'écran <span class="v" id="freedomV">15 %</span>
+      <input type="range" id="freedom" min="0" max="30" step="1" value="15"></label>
+  </section>
+
+  <section class="grp">
+    <h3>Rythme</h3>
+    <label>Durée du parcours <span class="v" id="durV">45 s</span>
+      <input type="range" id="dur" min="8" max="240" step="1" value="45"></label>
+    <div class="row">
+      <label>Intro (s)<input type="number" id="intro" value="4.5" min="0" max="20" step="0.5"></label>
+      <label>Final (s)<input type="number" id="outro" value="5" min="0" max="20" step="0.5"></label>
+    </div>
+    <label>Défilement
+      <select id="pace">
+        <option value="dist">Vitesse constante (distance)</option>
+        <option value="time">Temps réel du GPX</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="grp">
+    <h3>Points de passage</h3>
+    <div class="row">
+      <label>Départ<input type="text" id="startName" value="Départ" placeholder="(aucun)"></label>
+      <label>Arrivée<input type="text" id="endName" value="Arrivée" placeholder="(aucun)"></label>
+    </div>
+    <div class="row">
+      <button id="editWp">🖈 Placer sur la carte</button>
+      <button id="addHere">+ À la position</button>
+    </div>
+    <ul id="wpList"></ul>
+    <p class="hint" id="wpHint">Les balises <code>&lt;wpt&gt;</code> du GPX sont importées automatiquement. Le champ km replace le point le long de la trace. La pastille fixe la couleur du tronçon qui part du point (estompée = couleur héritée). Videz un nom de départ/arrivée pour retirer le repère.</p>
+  </section>
+
+  <section class="grp">
+    <h3>Projet</h3>
+    <div class="row">
+      <button id="saveProject">↓ Enregistrer (.json)</button>
+      <button id="openProject">↑ Ouvrir un projet</button>
+      <input type="file" id="projectFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint">Le fichier contient la trace GPX, les points de passage et tous les réglages : il se recharge à l’identique.</p>
+  </section>
+
+  <section class="grp">
+    <h3>Export vidéo</h3>
+    <div class="row">
+      <label>Images/s<select id="fps"><option>24</option><option selected>30</option><option>60</option></select></label>
+      <label>Qualité<select id="bitrate">
+        <option value="8">1080p · 8 Mb/s</option>
+        <option value="16" selected>1080p · 16 Mb/s</option>
+        <option value="28">1080p · 28 Mb/s</option>
+      </select></label>
+    </div>
+    <label class="chk" style="margin:2px 0 8px"><input type="checkbox" id="prefetchExport" checked> Précharger les tuiles avant l’export</label>
+    <div class="row" style="margin-top:4px">
+      <button id="prefetch">⚡ Précharger les tuiles</button>
+    </div>
+    <p class="hint" id="cacheInfo" style="margin:6px 0 10px">Cache de tuiles : vide</p>
+    <div class="row" style="margin-top:4px">
+      <button id="export" class="pri">Exporter en MP4</button>
+      <button id="cancelExport" style="flex:0 0 84px;display:none">Annuler</button>
+    </div>
+    <div class="bar"><i id="expBar"></i></div>
+    <p class="hint" id="expHint">Rendu image par image : chaque tuile est attendue avant capture. L’export continue si vous changez de fenêtre.</p>
+  </section>
+</aside>
+
+<main id="stage">
+  <div id="vpWrap">
+    <div id="viewport">
+      <div id="mapScaler"><div id="map"></div></div>
+      <canvas id="view" width="1920" height="1080"></canvas>
+      <div id="editBadge">Cliquez sur la carte pour ajouter un point · glissez les repères pour ajuster</div>
+    </div>
+  </div>
+  <div id="transport">
+    <button id="play" title="Lecture / pause">▶</button>
+    <button id="rewind" title="Retour au début">⏮</button>
+    <input type="range" id="scrub" min="0" max="1000" value="0" step="1">
+    <div id="phase">—</div>
+    <div id="clock">0:00 / 0:00</div>
+  </div>
+</main>
+<div id="toast"></div>
+<!-- carte dédiée à la mini-carte : hors écran, rendue à la demande -->
+<div id="miniWrap" style="position:fixed;left:-10000px;top:0;width:320px;height:200px"><div id="mini" style="width:100%;height:100%"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
+<script>
+"use strict";
+/* ==========================================================================
+   GPX Cinematic — moteur d'animation
+   Rendu : MapLibre GL (1920x1080) composité dans un canvas 2D avec le HUD.
+   Le canvas composite sert à la fois d'aperçu et de source d'export vidéo.
+   ========================================================================== */
+
+const W = 1920, H = 1080;
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const lerp  = (a,b,t) => a + (b-a)*t;
+const easeInOut = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+const easeOutCubic = t => 1-Math.pow(1-t,3);
+const R_EARTH = 6371008.8;
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+
+function haversine(a, b){
+  const dLat=(b.lat-a.lat)*D2R, dLon=(b.lon-a.lon)*D2R;
+  const la1=a.lat*D2R, la2=b.lat*D2R;
+  const x = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+  return 2*R_EARTH*Math.asin(Math.min(1,Math.sqrt(x)));
+}
+function bearingDeg(a, b){
+  const la1=a.lat*D2R, la2=b.lat*D2R, dLon=(b.lon-a.lon)*D2R;
+  const y = Math.sin(dLon)*Math.cos(la2);
+  const x = Math.cos(la1)*Math.sin(la2) - Math.sin(la1)*Math.cos(la2)*Math.cos(dLon);
+  return (Math.atan2(y,x)*R2D + 360) % 360;
+}
+function lerpAngle(a, b, t){
+  let d = ((b-a+540)%360)-180;
+  return (a + d*t + 360)%360;
+}
+const fmt = (n,d=0) => new Intl.NumberFormat('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+function mmss(s){ s=Math.max(0,s); const m=Math.floor(s/60); return m+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+function toast(msg, isErr){
+  const t=$('#toast'); t.textContent=msg; t.classList.toggle('err',!!isErr); t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'), isErr?6000:3200);
+}
+
+/* ---------------------------------------------------------------- unités */
+const U = {
+  get imperial(){ return $('#units').value === 'i'; },
+  dist(m){ return this.imperial ? {v:m/1609.344, u:'mi', d:m<16093?2:1} : {v:m/1000, u:'km', d:m<10000?2:1}; },
+  elev(m){ return this.imperial ? {v:m*3.28084, u:'ft'} : {v:m, u:'m'}; },
+  speed(ms){ return this.imperial ? {v:ms*2.23694, u:'mph'} : {v:ms*3.6, u:'km/h'}; }
+};
+
+/* ----------------------------------------------------------- parsing GPX */
+function parseGPX(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('Fichier XML illisible.');
+  const num = v => { const f = parseFloat(v); return Number.isFinite(f) ? f : null; };
+
+  const readPt = el => {
+    const lat = num(el.getAttribute('lat')), lon = num(el.getAttribute('lon'));
+    if (lat===null || lon===null) return null;
+    const eleEl = el.getElementsByTagName('ele')[0];
+    const timeEl = el.getElementsByTagName('time')[0];
+    const t = timeEl ? Date.parse(timeEl.textContent.trim()) : NaN;
+    return { lat, lon, ele: eleEl ? num(eleEl.textContent) : null, t: Number.isFinite(t) ? t : null };
+  };
+
+  let pts = [...doc.getElementsByTagName('trkpt')].map(readPt).filter(Boolean);
+  if (!pts.length) pts = [...doc.getElementsByTagName('rtept')].map(readPt).filter(Boolean);
+  if (pts.length < 2) throw new Error('Aucune trace exploitable (trkpt/rtept) dans ce GPX.');
+
+  const wpts = [...doc.getElementsByTagName('wpt')].map(el=>{
+    const p = readPt(el); if(!p) return null;
+    const n = el.getElementsByTagName('name')[0];
+    return { lat:p.lat, lon:p.lon, name: n ? n.textContent.trim() : 'Point' };
+  }).filter(Boolean);
+
+  const nameEl = doc.querySelector('trk > name') || doc.querySelector('metadata > name') || doc.querySelector('rte > name');
+  return { name: nameEl ? nameEl.textContent.trim() : '', points: pts, waypoints: wpts };
+}
+
+/* ------------------------------------------------- construction de la trace */
+function buildTrack(raw){
+  // 1. nettoyage : doublons et sauts aberrants
+  const pts = [raw[0]];
+  for (let i=1;i<raw.length;i++){
+    const d = haversine(pts[pts.length-1], raw[i]);
+    if (d < 0.4) continue;                 // point quasi identique
+    if (d > 50000) continue;               // saut GPS délirant
+    pts.push(raw[i]);
+  }
+  if (pts.length < 2) throw new Error('Trace trop courte.');
+
+  // 2. distances cumulées
+  let total = 0;
+  pts[0].d = 0;
+  for (let i=1;i<pts.length;i++){ total += haversine(pts[i-1], pts[i]); pts[i].d = total; }
+
+  // 3. altitudes : interpolation des trous + lissage
+  const hasEle = pts.some(p => p.ele !== null);
+  if (hasEle){
+    let last = null;
+    for (const p of pts) if (p.ele===null) p.ele = last; else last = p.ele;
+    for (let i=pts.length-1;i>=0;i--) if (pts[i].ele===null) pts[i].ele = pts[i+1] ? pts[i+1].ele : 0;
+    const sm = pts.map((p,i)=>{
+      let s=0,n=0;
+      for(let k=Math.max(0,i-3);k<=Math.min(pts.length-1,i+3);k++){ s+=pts[k].ele; n++; }
+      return s/n;
+    });
+    pts.forEach((p,i)=>p.ele = sm[i]);
+  } else pts.forEach(p=>p.ele = 0);
+
+  // 4. rééchantillonnage à pas constant (base de l'animation)
+  const nSeg  = clamp(Math.round(total/6), 400, 4000);
+  const step  = total/nSeg;
+  const S = new Array(nSeg+1);
+  let j = 0;
+  for (let i=0;i<=nSeg;i++){
+    const d = Math.min(i*step, total);
+    while (j < pts.length-2 && pts[j+1].d < d) j++;
+    const a=pts[j], b=pts[j+1]||pts[j];
+    const f = b.d>a.d ? (d-a.d)/(b.d-a.d) : 0;
+    S[i] = { lon: lerp(a.lon,b.lon,f), lat: lerp(a.lat,b.lat,f), ele: lerp(a.ele,b.ele,f), d };
+  }
+
+  // 5. dénivelé positif cumulé (seuil 2 m pour filtrer le bruit du GPS)
+  const gainAt = new Float64Array(S.length);
+  let gain=0, ref=S[0].ele;
+  for (let i=0;i<S.length;i++){
+    const e=S[i].ele;
+    if (e > ref+2){ gain += e-ref; ref = e; } else if (e < ref) ref = e;
+    gainAt[i]=gain;
+  }
+
+  // 6. emprise + min/max altitude
+  let minLon=180,maxLon=-180,minLat=90,maxLat=-90,minEle=1e9,maxEle=-1e9;
+  for (const s of S){
+    minLon=Math.min(minLon,s.lon); maxLon=Math.max(maxLon,s.lon);
+    minLat=Math.min(minLat,s.lat); maxLat=Math.max(maxLat,s.lat);
+    minEle=Math.min(minEle,s.ele); maxEle=Math.max(maxEle,s.ele);
+  }
+
+  // 7. temps GPX
+  const times = pts.filter(p=>p.t!==null);
+  const timed = times.length > pts.length*0.8 && times.length>2 &&
+                times[times.length-1].t > times[0].t;
+
+  const tk = {
+    pts, samples:S, step, total, gain, gainAt, hasEle,
+    timedPts: timed ? times : null,
+    minEle, maxEle, timed,
+    t0: timed ? times[0].t : null,
+    t1: timed ? times[times.length-1].t : null,
+    bounds: [[minLon,minLat],[maxLon,maxLat]],
+    coords: S.map(s=>[s.lon,s.lat])
+  };
+  computeHeadings(tk);
+  return tk;
+}
+
+/* cap lissé : visée en avant + moyenne vectorielle glissante */
+function computeHeadings(tk){
+  const S = tk.samples, n = S.length, step = tk.step;
+  const ahead  = Math.max(1, Math.round((+$('#ahead').value)/step));
+  const window = Math.max(1, Math.round((+$('#smooth').value)/step));
+  const hx = new Float64Array(n), hy = new Float64Array(n);
+  for (let i=0;i<n;i++){
+    const a = S[i], b = S[Math.min(n-1, i+ahead)];
+    const c = (a===b) ? S[Math.max(0,i-ahead)] : null;
+    const br = c ? bearingDeg(c, a) : bearingDeg(a, b);
+    hx[i]=Math.cos(br*D2R); hy[i]=Math.sin(br*D2R);
+  }
+  // moyenne glissante par sommes préfixées
+  const px=new Float64Array(n+1), py=new Float64Array(n+1);
+  for (let i=0;i<n;i++){ px[i+1]=px[i]+hx[i]; py[i+1]=py[i]+hy[i]; }
+  for (let i=0;i<n;i++){
+    const a=Math.max(0,i-window), b=Math.min(n,i+window+1), k=b-a;
+    S[i].hx=(px[b]-px[a])/k; S[i].hy=(py[b]-py[a])/k;
+    const m=Math.hypot(S[i].hx,S[i].hy)||1;
+    S[i].hx/=m; S[i].hy/=m;
+    S[i].heading = (Math.atan2(S[i].hy,S[i].hx)*R2D+360)%360;
+  }
+}
+
+/* état interpolé à une distance donnée */
+function stateAt(tk, d){
+  d = clamp(d, 0, tk.total);
+  const S=tk.samples, i=clamp(Math.floor(d/tk.step), 0, S.length-2);
+  const f=(d - S[i].d)/tk.step, a=S[i], b=S[i+1];
+  const hx=lerp(a.hx,b.hx,f), hy=lerp(a.hy,b.hy,f);
+  return {
+    lon: lerp(a.lon,b.lon,f), lat: lerp(a.lat,b.lat,f), ele: lerp(a.ele,b.ele,f),
+    heading: (Math.atan2(hy,hx)*R2D+360)%360, d, i
+  };
+}
+/* vitesse instantanée (m/s) d'après les temps GPX */
+function speedAt(tk, d){
+  if (!tk.timed) return null;
+  const w = 60; // fenêtre de 60 m
+  const t1 = timeAtDist(tk, Math.min(tk.total, d+w)), t0 = timeAtDist(tk, Math.max(0, d-w));
+  const dt = (t1-t0)/1000, dd = Math.min(tk.total,d+w) - Math.max(0,d-w);
+  return dt>0 ? dd/dt : 0;
+}
+function timeAtDist(tk, d){
+  const P=tk.pts; let lo=0, hi=P.length-1;
+  while (lo<hi-1){ const m=(lo+hi)>>1; if (P[m].d<=d) lo=m; else hi=m; }
+  const a=P[lo], b=P[hi];
+  if (a.t===null||b.t===null) return tk.t0;
+  const f = b.d>a.d ? (d-a.d)/(b.d-a.d) : 0;
+  return lerp(a.t,b.t,f);
+}
+function distAtTime(tk, t){
+  const P=tk.timedPts || tk.pts; let lo=0, hi=P.length-1;
+  if (t<=P[0].t) return P[0].d; if (t>=P[hi].t) return P[hi].d;
+  while (lo<hi-1){ const m=(lo+hi)>>1; if (P[m].t<=t) lo=m; else hi=m; }
+  const a=P[lo], b=P[hi], f=b.t>a.t?(t-a.t)/(b.t-a.t):0;
+  return lerp(a.d,b.d,f);
+}
+</script>
+
+<script>
+/* ======================================================================== */
+/*  CARTE                                                                   */
+/* ======================================================================== */
+const ESRI_ATTR = '© Esri, Maxar, Earthstar Geographics';
+const BASEMAPS = {
+  esri: { attr: ESRI_ATTR, layers: [
+    {id:'sat', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], maxzoom:19}
+  ]},
+  esrilab: { attr: ESRI_ATTR, layers: [
+    {id:'sat', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], maxzoom:19},
+    {id:'lab', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], maxzoom:19}
+  ]},
+  topo: { attr: '© OpenTopoMap, © OpenStreetMap contributors', layers: [
+    {id:'sat', tiles:['https://a.tile.opentopomap.org/{z}/{x}/{y}.png','https://b.tile.opentopomap.org/{z}/{x}/{y}.png'], maxzoom:17}
+  ]}
+};
+
+/* ===========================================================================
+   MAGASIN DE TUILES
+   Toutes les tuiles passent par le protocole « cache:// », servi depuis un
+   magasin en mémoire. Deux raisons :
+   - le préchargement le remplit à l'avance, et la lecture comme l'export y
+     trouvent ensuite leurs tuiles instantanément ;
+   - le cache HTTP du navigateur ne suffit pas : les tuiles de relief (AWS)
+     n'ont aucun en-tête de cache.
+   Les requêtes identiques en cours sont fusionnées, le débit réseau est
+   plafonné, et les tuiles les plus anciennes sont évincées au-delà de 700 Mo.
+=========================================================================== */
+const viaCache = u => u.replace(/^https:\/\//, 'cache://');
+const TILE_CACHE_MAX = 700 * 1024 * 1024, TILE_PARALLEL = 14;
+const tileStore = new Map();       // url https → ArrayBuffer, du plus ancien au plus récent
+const tileInflight = new Map();    // url → Promise<ArrayBuffer>
+const tileMissing = new Set();     // 404/403 : inutile de redemander
+const tileQueue = [];
+let tileBytes = 0, tileActive = 0;
+
+function storeTile(url, buf){
+  tileStore.set(url, buf); tileBytes += buf.byteLength;
+  while (tileBytes > TILE_CACHE_MAX && tileStore.size){
+    const [k, v] = tileStore.entries().next().value;
+    tileStore.delete(k); tileBytes -= v.byteLength;
+  }
+}
+function pumpTiles(){
+  while (tileActive < TILE_PARALLEL && tileQueue.length){
+    const job = tileQueue.shift(); tileActive++;
+    fetch(job.url, {mode:'cors'})
+      .then(r => { if (!r.ok){ const e = new Error('HTTP '+r.status); e.status = r.status; throw e; } return r.arrayBuffer(); })
+      .then(buf => { storeTile(job.url, buf); job.resolve(buf); })
+      .catch(err => { if (err.status === 404 || err.status === 403) tileMissing.add(job.url); job.reject(err); })
+      .finally(() => { tileActive--; tileInflight.delete(job.url); pumpTiles(); });
+  }
+}
+function fetchTile(url){
+  url = url.replace(/^cache:\/\//, 'https://');
+  const hit = tileStore.get(url);
+  if (hit){ tileStore.delete(url); tileStore.set(url, hit); return Promise.resolve(hit); }   // rafraîchit l'ordre
+  if (tileMissing.has(url)) return Promise.reject(new Error('Tuile absente'));
+  let p = tileInflight.get(url);
+  if (!p){
+    p = new Promise((resolve, reject) => tileQueue.push({ url, resolve, reject }));
+    tileInflight.set(url, p);
+    pumpTiles();
+  }
+  return p;
+}
+maplibregl.addProtocol('cache', (params, abortController) => new Promise((resolve, reject) => {
+  const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+  if (abortController.signal.aborted) return onAbort();
+  abortController.signal.addEventListener('abort', onAbort, { once:true });
+  // MapLibre peut transférer le tampon vers un worker (il serait alors vidé) :
+  // on lui en donne une copie, l'original reste dans le magasin.
+  fetchTile(params.url).then(
+    buf => { abortController.signal.removeEventListener('abort', onAbort); resolve({ data: buf.slice(0) }); },
+    err => { abortController.signal.removeEventListener('abort', onAbort); reject(err); });
+}));
+
+function buildStyle(key){
+  const bm = BASEMAPS[key] || BASEMAPS.esri;
+  const sources = {
+    terrainDEM: {
+      type:'raster-dem', encoding:'terrarium', tileSize:256, maxzoom:14,
+      tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'].map(viaCache),
+      attribution:'Tilezen / Mapzen'
+    }
+  };
+  const layers = [];
+  bm.layers.forEach(l=>{
+    sources[l.id] = { type:'raster', tiles:l.tiles.map(viaCache), tileSize:256, maxzoom:l.maxzoom, attribution:bm.attr };
+    layers.push({ id:l.id, type:'raster', source:l.id, paint:{ 'raster-fade-duration':0, 'raster-resampling':'linear' } });
+  });
+  return {
+    version:8, glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources, layers,
+    sky:{
+      'sky-color':'#5b8fd6','sky-horizon-blend':0.55,
+      'horizon-color':'#cfe0f5','horizon-fog-blend':0.6,
+      'fog-color':'#dce8f7','fog-ground-blend':0.55,
+      'atmosphere-blend':['interpolate',['linear'],['zoom'],0,0.9,11,0.35,14,0]
+    }
+  };
+}
+
+/* Réglages enregistrés lus AVANT la création de la carte : sinon le sélecteur
+   affichait le fond mémorisé alors que la carte restait sur le fond par défaut. */
+const SAVED = (()=>{ try { return JSON.parse(localStorage.getItem('gpxcine')||'{}'); } catch(e){ return {}; } })();
+const INITIAL_BASEMAP = BASEMAPS[SAVED.basemap] ? SAVED.basemap : 'esri';
+
+const map = new maplibregl.Map({
+  container:'map', style:buildStyle(INITIAL_BASEMAP),
+  center:[6.86,45.92], zoom:11, pitch:0, bearing:0,
+  maxPitch:85, attributionControl:false, preserveDrawingBuffer:true,
+  fadeDuration:0, interactive:true, refreshExpiredTiles:false,
+  maxTileCacheSize:1200            // le relief pèse ~128 Ko/tuile : éviter de refetcher
+});
+['scrollZoom','boxZoom','dragRotate','dragPan','keyboard','doubleClickZoom','touchZoomRotate']
+  .forEach(h => map[h] && map[h].disable());
+
+const EMPTY = {type:'FeatureCollection',features:[]};
+function lineFC(coords){
+  return coords.length>1
+    ? {type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}}
+    : EMPTY;
+}
+/* Largeurs de la trace active, multipliées par le réglage d'épaisseur ; les
+   autres traces restent fines pour que la trace suivie se détache. */
+function activeWidth(a, b){
+  const k = +$('#trackWidth').value || 1.5;
+  return ['interpolate',['linear'],['zoom'],10,a*k,16,b*k];
+}
+const ACTIVE_WIDTHS = { 'route-shadow':[3,7], 'route-bg':[2,4], 'done-glow':[10,26], 'done-line':[3.5,8], 'done-core':[1.2,2.6] };
+function applyTrackWidth(){
+  for (const [id,[a,b]] of Object.entries(ACTIVE_WIDTHS))
+    if (map.getLayer(id)) map.setPaintProperty(id, 'line-width', activeWidth(a,b));
+}
+function addRouteLayers(){
+  if (map.getSource('route')) return;
+  map.addSource('others', {type:'geojson', data:EMPTY});
+  map.addLayer({id:'others-shadow',type:'line',source:'others',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#000','line-opacity':0.25,'line-width':['interpolate',['linear'],['zoom'],10,2.2,16,4.5]}});
+  map.addLayer({id:'others-line',type:'line',source:'others',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#b4bcc8','line-opacity':0.75,'line-width':['interpolate',['linear'],['zoom'],10,1.2,16,2.6]}});
+  map.addSource('route', {type:'geojson', data:EMPTY});
+  map.addSource('done',  {type:'geojson', data:EMPTY});
+  map.addLayer({id:'route-shadow',type:'line',source:'route',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#000','line-opacity':0.35,'line-width':['interpolate',['linear'],['zoom'],10,3,16,7]}});
+  map.addLayer({id:'route-bg',type:'line',source:'route',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':['get','color'],'line-opacity':0.75,'line-width':['interpolate',['linear'],['zoom'],10,2,16,4],
+           'line-dasharray':[2.5,2]}});
+  map.addLayer({id:'done-glow',type:'line',source:'done',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':['get','color'],'line-opacity':0.30,'line-blur':10,
+           'line-width':['interpolate',['linear'],['zoom'],10,10,16,26]}});
+  map.addLayer({id:'done-line',type:'line',source:'done',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],10,3.5,16,8]}});
+  map.addLayer({id:'done-core',type:'line',source:'done',
+    layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#ffffff','line-opacity':0.75,'line-width':['interpolate',['linear'],['zoom'],10,1.2,16,2.6]}});
+  applyTrackWidth();
+}
+const ACCENT = () => $('#accent').value;
+/* Les couleurs sont portées par les tronçons (propriété `color` des entités) :
+   un changement de couleur impose seulement de reconstruire la trace parcourue. */
+function refreshAccent(){ lastDoneIdx = -1; }
+function applyTerrain(){
+  const on = $('#terrain').checked;
+  try {
+    map.setTerrain(on ? {source:'terrainDEM', exaggeration:+$('#exag').value} : null);
+  } catch(e){ /* DEM indisponible : on continue à plat */ }
+}
+function pushRoute(){
+  if (!map.getSource('route')) return;
+  // la trace complète, découpée en tronçons colorés (la partie à venir est en pointillés)
+  map.getSource('route').setData(track ? doneFC(track.total) : EMPTY);
+  lastSegSig = track ? segSig() : '';
+  // les autres traces chargées, en gris
+  map.getSource('others').setData({ type:'FeatureCollection',
+    features: tracks.filter(t => t.id !== activeId).map(t => lineFC(t.track.coords)) });
+  if (mini) renderMiniBase();          // les autres traces figurent aussi sur la mini-carte
+}
+
+let currentBasemap = INITIAL_BASEMAP;
+function setBasemap(key){
+  currentBasemap = key;
+  map.setStyle(buildStyle(key));
+  map.once('styledata', ()=>{
+    addRouteLayers(); applyTerrain(); pushRoute(); refreshAccent(); lastDoneIdx=-1;
+    mini = null; scheduleMinimap();
+    renderPreview(); refreshPreviewSoon();
+  });
+}
+/* Après un changement de style, de terrain ou de trace, la carte rend du vide
+   pendant un court instant. On ne recompose alors pas l'aperçu par-dessus, on
+   replanifie : sinon l'utilisateur voit un cadre noir jusqu'au prochain
+   rafraîchissement. */
+let repaintPending = false;
+function refreshPreviewSoon(){
+  if (exporting || repaintPending) return;
+  repaintPending = true;
+  // course contre une temporisation : l'aperçu ne doit jamais rester bloqué,
+  // même si le chargement du style n'aboutit pas (onglet masqué, réseau coupé)
+  Promise.race([ waitIdle(9000).catch(()=>{}), delay(9500) ]).then(()=>{
+    repaintPending = false;
+    if (exporting || playing || editing || !track || !ensureStyle()) return;
+    const f = frameAt(curT);
+    applyCam(f.cam); pushDone(f.d); map.redraw();
+    updateClock(f); composite(f);
+  });
+}
+
+let styleReady = false;
+function ensureStyle(){
+  if (!map.isStyleLoaded()) return false;
+  if (!map.getSource('route')){ addRouteLayers(); applyTerrain(); pushRoute(); refreshAccent(); }
+  if (!styleReady){ styleReady = true; invalidateOverview(); }
+  return true;
+}
+map.on('load',      ()=>{ ensureStyle(); renderPreview(); });
+map.on('styledata', ()=>{ ensureStyle(); });
+map.on('error', e => { if (e && e.error && /terrain|dem/i.test(e.error.message||'')) return; });
+
+/* ======================================================================== */
+/*  TIMELINE & CAMÉRA                                                       */
+/* ======================================================================== */
+let track = null, waypoints = [], overviewCam = null;
+const TL = {
+  get intro(){ return Math.max(0, +$('#intro').value || 0); },
+  get travel(){ return Math.max(1, +$('#dur').value || 30); },
+  get outro(){ return Math.max(0, +$('#outro').value || 0); },
+  get hold(){ return Math.min(1.4, this.intro*0.32); },
+  get tail(){ return Math.min(1.8, this.outro*0.34); },
+  get total(){ return this.intro + this.travel + this.outro; }
+};
+function invalidateOverview(){ overviewCam = null; }
+
+function getOverview(){
+  if (overviewCam || !track) return overviewCam;
+  const c = map.cameraForBounds(track.bounds, {padding:{top:130,bottom:150,left:170,right:170}, bearing:0, pitch:0});
+  overviewCam = { center:[c.center.lng, c.center.lat], zoom:Math.min(c.zoom, 16.5), bearing:0, pitch:0, padding:{top:0,bottom:0,left:0,right:0} };
+  return overviewCam;
+}
+/* profil de vitesse trapézoïdal : démarrage et arrêt en douceur */
+function edgeEase(p, e){
+  p = clamp(p,0,1); if (e<=0) return p;
+  let s;
+  if (p < e)          s = p*p/(2*e);
+  else if (p > 1-e)   s = (1-e) - (1-p)*(1-p)/(2*e);
+  else                s = e/2 + (p-e);
+  return s/(1-e);
+}
+function distAtProgress(p){
+  const q = edgeEase(p, 0.05);
+  if ($('#pace').value === 'time' && track.timed) return distAtTime(track, lerp(track.t0, track.t1, q));
+  return track.total * q;
+}
+function progressForDistance(dd){
+  let lo=0, hi=1;
+  for (let k=0;k<40;k++){ const m=(lo+hi)/2; if (distAtProgress(m) < dd) lo=m; else hi=m; }
+  return (lo+hi)/2;
+}
+/* ---------------------------------------------------------------------------
+   Cap de la caméra.
+   Le cap géométrique de la trace varie très vite dans les lacets : lissé en
+   distance, il produit quand même des rotations brutales à l'écran, parce que
+   ce que l'œil perçoit ce sont des degrés par SECONDE. On précalcule donc le
+   cap dans le domaine temporel de l'animation :
+     1. échantillonnage du cap brut à intervalle de temps constant,
+     2. déroulage des angles (pas de saut à 360°),
+     3. filtre exponentiel aller-retour : lissage à phase nulle, donc sans
+        retard de la caméra sur la trajectoire,
+     4. limitation de la vitesse angulaire en °/s.
+   Le résultat ne dépend que des réglages : le rendu reste déterministe, image
+   par image, ce qu'exige l'export.
+--------------------------------------------------------------------------- */
+function computeCameraTrack(){
+  if (!track) return;
+  const dur = TL.travel;
+  const N   = clamp(Math.round(dur*24), 400, 4000);
+  const dt  = dur/(N-1);
+  const a   = new Float64Array(N);
+
+  let prev = 0;
+  for (let k=0;k<N;k++){
+    const h = stateAt(track, distAtProgress(k/(N-1))).heading;
+    if (k===0) a[0] = h;
+    else {
+      let x = h;
+      while (x-prev >  180) x -= 360;
+      while (x-prev < -180) x += 360;
+      a[k] = x;
+    }
+    prev = a[k];
+  }
+
+  const tau = +$('#inertia').value;
+  if (tau > 0.01){
+    const al = 1 - Math.exp(-dt/tau);
+    for (let k=1;k<N;k++)    a[k] = a[k-1] + (a[k]-a[k-1])*al;
+    for (let k=N-2;k>=0;k--) a[k] = a[k+1] + (a[k]-a[k+1])*al;
+  }
+
+  const lim = (+$('#maxrot').value) * dt;
+  for (let pass=0; pass<3; pass++){
+    for (let k=1;k<N;k++)    a[k] = clamp(a[k], a[k-1]-lim, a[k-1]+lim);
+    for (let k=N-2;k>=0;k--) a[k] = clamp(a[k], a[k+1]-lim, a[k+1]+lim);
+  }
+  track.camB = a;
+  computeCameraCenter(N, dt);
+}
+
+/* ---------------------------------------------------------------------------
+   Position de la caméra.
+   Dans une suite d'épingles, suivre le point exactement fait balayer la carte
+   d'un bord à l'autre à chaque lacet. On laisse donc le point s'écarter du
+   centre : la caméra suit une trajectoire lissée (la ligne moyenne de la
+   montée) et le point oscille autour, dans un rayon borné.
+     - filtre exponentiel aller-retour sur la position (phase nulle : pas de
+       retard en ligne droite). Sa longueur au sol est calée sur le rayon
+       autorisé : si le lissage était plus long que ce rayon, l'écart
+       saturerait, la caméra suivrait le point à distance fixe et hériterait
+       de toutes ses cassures,
+     - écart limité par une saturation douce (tanh), trois itérations,
+     - passe finale courte pour effacer les dernières cassures.
+   Le rayon est une fraction de la largeur de l'image, convertie en mètres au
+   zoom de suivi : le point ne peut pas sortir du cadre.
+--------------------------------------------------------------------------- */
+function computeCameraCenter(N, dt){
+  const lat0 = track.samples[0].lat, lon0 = track.samples[0].lon;
+  const kx = Math.cos(lat0*D2R) * R_EARTH * D2R, ky = R_EARTH * D2R;
+  const px = new Float64Array(N), py = new Float64Array(N);
+  for (let k=0;k<N;k++){
+    const s = stateAt(track, distAtProgress(k/(N-1)));
+    px[k] = (s.lon-lon0)*kx; py[k] = (s.lat-lat0)*ky;
+  }
+  const cx = Float64Array.from(px), cy = Float64Array.from(py);
+
+  const freedom = (+$('#freedom').value)/100;
+  if (freedom > 0){
+    const mpp = 40075016.686*Math.cos(lat0*D2R) / (512*Math.pow(2, +$('#zoom').value));
+    const R   = freedom * W * mpp;                       // écart maximal, en mètres
+    const v   = track.total / TL.travel;                 // vitesse moyenne au sol (m/s)
+    const tau = clamp(0.8*R / v, 0.3, 10);               // longueur de lissage ≈ 0,8 R
+    const smooth = (t) => {
+      const al = 1 - Math.exp(-dt/t);
+      for (const c of [cx, cy]){
+        for (let k=1;k<N;k++)    c[k] = c[k-1] + (c[k]-c[k-1])*al;
+        for (let k=N-2;k>=0;k--) c[k] = c[k+1] + (c[k]-c[k+1])*al;
+      }
+    };
+    const limit = (r, soft) => {
+      for (let k=0;k<N;k++){
+        const dx=cx[k]-px[k], dy=cy[k]-py[k], n=Math.hypot(dx,dy);
+        if (n < 1e-6) continue;
+        const m = soft ? r*Math.tanh(n/r) : Math.min(n, r);
+        cx[k] = px[k]+dx*m/n; cy[k] = py[k]+dy*m/n;
+      }
+    };
+    for (let it=0; it<3; it++){ smooth(tau); limit(0.9*R, true); }
+    smooth(Math.min(0.35, tau));                         // efface les dernières cassures
+    limit(R, false);                                     // garantie : jamais hors du rayon
+  }
+  const lon = new Float64Array(N), lat = new Float64Array(N);
+  for (let k=0;k<N;k++){ lon[k] = lon0 + cx[k]/kx; lat[k] = lat0 + cy[k]/ky; }
+  track.camLon = lon; track.camLat = lat;
+}
+function camCenterAt(p){
+  const x = clamp(p,0,1)*(track.camLon.length-1), i = Math.min(track.camLon.length-2, Math.floor(x)), f = x-i;
+  return [lerp(track.camLon[i], track.camLon[i+1], f), lerp(track.camLat[i], track.camLat[i+1], f)];
+}
+function camBearingAt(p){
+  const a = track.camB;
+  if (!a) return stateAt(track, distAtProgress(p)).heading;
+  const x = clamp(p,0,1)*(a.length-1), i = Math.min(a.length-2, Math.floor(x));
+  return lerp(a[i], a[i+1], x-i);
+}
+function computeCameraTrackSafe(){ if (track) computeCameraTrack(); }
+function rebuildMotion(){
+  if (!track) return;
+  computeHeadings(track);
+  computeCameraTrack();
+  wpTimesDirty = true;
+}
+function followCam(d, p){
+  const s = stateAt(track, d);
+  const a = (+$('#anchor').value)/100;
+  if (p == null) p = progressForDistance(d);
+  return {
+    center: track.camLon ? camCenterAt(p) : [s.lon, s.lat], zoom:+$('#zoom').value,
+    bearing: camBearingAt(p),
+    pitch:+$('#pitch').value,
+    padding:{ top: H*(2*a-1), bottom:0, left:0, right:0 }, _state:s
+  };
+}
+function mixCam(A, B, t){
+  return {
+    center:[lerp(A.center[0],B.center[0],t), lerp(A.center[1],B.center[1],t)],
+    zoom:   lerp(A.zoom, B.zoom, t),
+    bearing:lerpAngle(A.bearing, B.bearing, t),
+    pitch:  lerp(A.pitch, B.pitch, t),
+    padding:{ top:lerp(A.padding.top,B.padding.top,t), bottom:0, left:0, right:0 }
+  };
+}
+/* Décrit l'état complet de l'animation à l'instant t (secondes). */
+function frameAt(t){
+  const I=TL.intro, TR=TL.travel, O=TL.outro;
+  t = clamp(t, 0, TL.total);
+  const ov = getOverview();
+  let phase, cam, d, travelP, hud=1, titleA=0, endA=0;
+
+  if (t < I){                                   // ---- intro
+    phase='intro'; d=0; travelP=0;
+    const start = followCam(0, 0);
+    const u = I<=TL.hold ? 1 : clamp((t-TL.hold)/(I-TL.hold), 0, 1);
+    cam = mixCam(ov, start, easeInOut(u));
+    hud = easeOutCubic(clamp((u-0.45)/0.55,0,1));
+    titleA = clamp(t/0.8, 0, 1);
+  } else if (t < I+TR){                          // ---- parcours
+    phase='travel'; travelP=(t-I)/TR; d=distAtProgress(travelP);
+    cam = followCam(d, travelP);
+    const tt = t-I;
+    titleA = clamp(1-(tt-2.2)/1.2, 0, 1);
+  } else {                                       // ---- final
+    phase='outro'; travelP=1; d=track.total;
+    const end = followCam(track.total, 1);
+    const u = O<=TL.tail ? 1 : clamp((t-I-TR)/(O-TL.tail), 0, 1);
+    cam = mixCam(end, ov, easeInOut(u));
+    hud = 1-clamp((u-0.55)/0.45, 0, 1);
+    endA = easeOutCubic(clamp((u-0.35)/0.5, 0, 1));
+  }
+  return {t, phase, cam, d, travelP, hud, titleA, endA};
+}
+
+/* ======================================================================== */
+/*  RENDU                                                                   */
+/* ======================================================================== */
+const view = $('#view'), ctx = view.getContext('2d', {alpha:false});
+let lastDoneIdx = -1;
+
+/* Tronçons colorés : un point de passage peut changer la couleur de la trace à
+   partir de lui. Sans couleur propre, le tronçon précédent continue ; le premier
+   tronçon prend la couleur générale. L'arrivée n'ouvre aucun tronçon. */
+function segments(){
+  const segs = [{ d0:0, color:ACCENT() }];
+  for (const w of waypoints){
+    if (!w.color || w.kind==='end') continue;
+    const last = segs[segs.length-1];
+    if (w.d <= last.d0 + 0.5){ last.color = w.color; continue; }   // point au départ
+    segs.push({ d0:w.d, color:w.color });
+  }
+  for (let i=0;i<segs.length;i++) segs[i].d1 = i<segs.length-1 ? segs[i+1].d0 : track.total;
+  return segs;
+}
+function colorAt(d){
+  let c = ACCENT();
+  for (const g of segments()) if (d >= g.d0) c = g.color;
+  return c;
+}
+/* Trace parcourue jusqu'à `d`, découpée en une entité par tronçon. */
+function doneFC(d){
+  const feats = [];
+  for (const g of segments()){
+    const a = g.d0, b = Math.min(g.d1, d);
+    if (b - a < 0.5) continue;
+    const pa = stateAt(track, a), pb = stateAt(track, b);
+    const c = [[pa.lon, pa.lat]];
+    for (let k=Math.floor(a/track.step)+1; k*track.step < b && k < track.coords.length; k++) c.push(track.coords[k]);
+    c.push([pb.lon, pb.lat]);
+    feats.push({ type:'Feature', properties:{ color:g.color }, geometry:{ type:'LineString', coordinates:c } });
+  }
+  return { type:'FeatureCollection', features:feats };
+}
+/* Signature des tronçons : dès qu'une couleur, un point coloré ou la couleur
+   générale change, les deux sources de la trace sont reconstruites. Vérifié à
+   chaque image, ce qui couvre toutes les façons de modifier les tronçons. */
+let lastSegSig = '';
+const segSig = () => segments().map(g => g.color + '@' + Math.round(g.d0)).join('|');
+function pushDone(d){
+  if (!map.getSource('done')) return;
+  const sig = segSig();
+  if (sig !== lastSegSig){
+    lastSegSig = sig; lastDoneIdx = -1;
+    if (map.getSource('route')) map.getSource('route').setData(doneFC(track.total));
+  }
+  const i = clamp(Math.floor(d/track.step), 0, track.samples.length-1);
+  if (i === lastDoneIdx && i!==0) return;
+  lastDoneIdx = i;
+  map.getSource('done').setData(doneFC(d));
+}
+function applyCam(cam){
+  map.jumpTo({center:cam.center, zoom:cam.zoom, bearing:cam.bearing, pitch:cam.pitch, padding:cam.padding});
+}
+/* Cède la main à la boucle d'événements sans passer par setTimeout :
+   les tâches MessageChannel ne sont pas bridées à 1 Hz quand l'onglet
+   passe en arrière-plan, ce qui garde l'export à pleine vitesse. */
+const _chan = new MessageChannel(), _queue = [];
+_chan.port1.onmessage = () => { const r=_queue.shift(); r && r(); };
+function nextTask(){ return new Promise(r => { _queue.push(r); _chan.port2.postMessage(0); }); }
+
+/* Attend que toutes les tuiles de la vue courante soient prêtes.
+   On force des rendus synchrones (map.redraw) plutôt que d'attendre
+   l'événement 'idle' : cela reste fiable même si l'onglet perd le focus
+   et que requestAnimationFrame est suspendu. */
+const delay = ms => new Promise(r=>setTimeout(r, ms));
+/* Résout au premier événement 'data' de la carte (chargement d'une tuile),
+   ou au bout de `ms`. Piloté par le réseau : reste réactif même en arrière-plan. */
+function tileEvent(ms){
+  return new Promise(res=>{
+    const h = ()=>{ clearTimeout(t); map.off('data', h); res(); };
+    const t = setTimeout(()=>{ map.off('data', h); res(); }, ms);
+    map.on('data', h);
+  });
+}
+/* Garde-fou : après un changement de terrain ou de style, la carte peut rendre
+   une image vide pendant un instant alors que toutes les tuiles sont marquées
+   chargées. Une image noire dans la vidéo serait le pire résultat possible, on
+   vérifie donc que le rendu n'est pas vide (abandon au bout de 1,5 s pour ne
+   pas bloquer sur une zone réellement sombre). */
+const _probe = document.createElement('canvas');
+_probe.width = 32; _probe.height = 18;
+const _probeCtx = _probe.getContext('2d', {willReadFrequently:true});
+function mapIsBlank(){
+  try {
+    _probeCtx.clearRect(0,0,32,18);
+    _probeCtx.drawImage(map.getCanvas(), 0, 0, 32, 18);
+    const d = _probeCtx.getImageData(0,0,32,18).data;
+    for (let i=0;i<d.length;i+=4) if (d[i]+d[i+1]+d[i+2] > 45) return false;
+    return true;
+  } catch(e){ return false; }
+}
+/* Un rendu plein cadre coûte ~8 ms de GPU sur le thread principal. Le
+   chargement d'une tuile émet plusieurs événements 'data', donc redessiner à
+   chaque événement saturait le thread (≈55 rendus par image) : l'interface
+   se figeait et les tuiles elles-mêmes arrivaient plus lentement. On limite
+   donc la cadence pendant l'attente, et on ne force un rendu que pour
+   confirmer l'état final. */
+const REDRAW_MIN_MS = 60;
+const netBusy = () => tileActive > 0 || tileQueue.length > 0;
+async function waitIdle(timeout=15000){
+  const t0 = performance.now();
+  let stable = 0, lastDraw = performance.now();
+  map.redraw();                                  // déclenche les requêtes de tuiles
+  while (performance.now()-t0 < timeout){
+    if (map.isStyleLoaded() && map.areTilesLoaded()){
+      stable++;
+      map.redraw(); lastDraw = performance.now();
+      if (stable >= 2 && (!mapIsBlank() || performance.now()-t0 > 1500)) return true;
+    } else {
+      stable = 0;
+      const now = performance.now();
+      if (now-lastDraw >= (netBusy() ? REDRAW_MIN_MS : 16)){ map.redraw(); lastDraw = now; }
+    }
+    // Réseau en cours : on attend l'arrivée d'une tuile. Tuiles déjà en mémoire :
+    // le chargement interne de MapLibre n'avance qu'au rendu suivant, inutile
+    // d'attendre un événement qui ne viendra pas.
+    await tileEvent(netBusy() ? 120 : 16);
+  }
+  map.redraw();
+  return false;
+}
+
+/* Rend la main au navigateur pour qu'il repeigne l'interface pendant l'export.
+   En arrière-plan requestAnimationFrame ne se déclenche plus : on bascule sur
+   une tâche MessageChannel, qui n'est pas bridée. */
+function uiYield(){
+  if (document.hidden) return nextTask();        // onglet caché : rAF ne se déclenche plus
+  // Une fenêtre masquée par une autre peut aussi cesser d'être repeinte sans que
+  // document.hidden bascule : on ne laisse jamais l'export attendre plus de 60 ms.
+  return Promise.race([ new Promise(r => requestAnimationFrame(()=>r())), delay(60) ]);
+}
+function composite(f){
+  ctx.fillStyle='#05070a'; ctx.fillRect(0,0,W,H);
+  ctx.drawImage(map.getCanvas(), 0, 0, W, H);
+  drawHUD(f);
+}
+async function renderFrame(t, wait){
+  const f = frameAt(t);
+  applyCam(f.cam);
+  pushDone(f.d);
+  if (wait) await waitIdle(); else map.triggerRepaint();
+  composite(f);
+  return f;
+}
+</script>
+
+<script>
+/* ======================================================================== */
+/*  HUD (dessiné en canvas 2D : identique à l'aperçu et à l'export)         */
+/* ======================================================================== */
+const FONT = (w,s) => `${w} ${s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+const M = 72;
+
+function shadow(blur, a=0.65, dy=2){ ctx.shadowColor=`rgba(0,0,0,${a})`; ctx.shadowBlur=blur; ctx.shadowOffsetY=dy; }
+function noShadow(){ ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0; }
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x,y,w,h,r);
+  else { ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+}
+const HAS_LS = 'letterSpacing' in CanvasRenderingContext2D.prototype;
+function tracked(text, x, y, sp){
+  if (HAS_LS){ ctx.letterSpacing=sp+'px'; ctx.fillText(text,x,y); const w=ctx.measureText(text).width; ctx.letterSpacing='0px'; return w; }
+  let cx = x;
+  for (const ch of text){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + sp; }
+  return cx - sp - x;
+}
+function trackedWidth(text, sp){
+  if (HAS_LS){ ctx.letterSpacing=sp+'px'; const w=ctx.measureText(text).width; ctx.letterSpacing='0px'; return w; }
+  let w=0; for (const ch of text) w += ctx.measureText(ch).width + sp; return w - sp;
+}
+const hex2rgb = h => { const n=parseInt(h.slice(1),16); return [n>>16&255, n>>8&255, n&255]; };
+const rgba = (h,a) => { const [r,g,b]=hex2rgb(h); return `rgba(${r},${g},${b},${a})`; };
+
+let wpTimesDirty = true;
+function wpTimes(){
+  if (wpTimesDirty && track){
+    for (const w of waypoints) w.tReach = TL.intro + progressForDistance(w.d)*TL.travel;
+    wpTimesDirty = false;
+  }
+  return waypoints;
+}
+
+function drawHUD(f){
+  if (!track){
+    ctx.fillStyle='#0c0f14'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#4a566e';
+    ctx.textAlign='center'; ctx.font=FONT(600,40);
+    ctx.fillText('Chargez un fichier GPX pour commencer', W/2, H/2-6);
+    ctx.font=FONT(400,22); ctx.fillStyle='#39435a';
+    ctx.fillText('Format 16:9 · 1920 × 1080', W/2, H/2+34);
+    ctx.textAlign='left'; return;
+  }
+  const acc = ACCENT();
+  const st  = stateAt(track, f.d);
+
+  /* --- voiles de lisibilité --- */
+  let g = ctx.createLinearGradient(0,H-360,0,H);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.62)');
+  ctx.fillStyle=g; ctx.fillRect(0,H-360,W,360);
+  g = ctx.createLinearGradient(0,0,0,240);
+  g.addColorStop(0,'rgba(0,0,0,0.48)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,240);
+
+  const cur = colorAt(f.d);             // couleur du tronçon en cours
+  drawOtherEndpoints(f);
+  drawWaypoints(f, acc);
+  if (f.endA < 0.85) drawMarker(f, st, cur);
+  drawRose(f);
+  drawMinimap(f);
+  if (f.titleA > 0.01) drawTitle(f.titleA);
+  if (f.hud > 0.01 && f.endA < 0.9) drawStats(f, st, cur);
+  drawBanner(f, acc);
+  if (f.endA > 0.01) drawEndCard(f, acc);
+
+  /* --- barre de progression + crédits --- */
+  ctx.globalAlpha = 1;
+  ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.fillRect(0,H-5,W,5);
+  ctx.fillStyle=acc; ctx.fillRect(0,H-5, W*clamp(f.t/TL.total,0,1), 5);
+  ctx.globalAlpha=0.5; ctx.fillStyle='#fff'; ctx.font=FONT(400,15); ctx.textAlign='right';
+  ctx.fillText((BASEMAPS[$('#basemap').value]||BASEMAPS.esri).attr, W-18, H-16);
+  ctx.textAlign='left'; ctx.globalAlpha=1;
+}
+
+/* ------------------------------------------------------------- titre */
+function drawTitle(a){
+  const title = $('#title').value.trim(), sub = $('#subtitle').value.trim();
+  if (!title && !sub) return;
+  ctx.globalAlpha = a; ctx.textAlign='left';
+  const withRose = $('#showCompass').checked;
+  const x = withRose ? ROSE.cx + ROSE.r + 34 : M;
+  const y = (withRose ? ROSE.cy + 6 : M + 22) + (1-a)*-14;
+  if (title){
+    shadow(22,0.7,3); ctx.fillStyle='#fff'; ctx.font=FONT(700,52);
+    ctx.fillText(title, x, y);
+  }
+  if (sub){
+    shadow(16,0.6,2); ctx.fillStyle='rgba(255,255,255,0.82)'; ctx.font=FONT(500,24);
+    ctx.fillText(sub, x, y + (title?38:0));
+  }
+  noShadow(); ctx.globalAlpha=1;
+}
+
+/* -------------------------------------------------- statistiques live */
+function statCols(f, st){
+  const d = U.dist(f.d), e = U.elev(st.ele);
+  const cols = [
+    {label:'DISTANCE', value:fmt(d.v,d.d), unit:d.u},
+    ...(track.hasEle ? [{label:'ALTITUDE', value:fmt(e.v,0), unit:e.u}] : []),
+  ];
+  if (track.hasEle){
+    const gi = clamp(Math.round(f.d/track.step), 0, track.gainAt.length-1);
+    const gain = U.elev(track.gainAt[gi]);
+    cols.push({label:'DÉNIVELÉ +', value:fmt(gain.v,0), unit:gain.u});
+  }
+  const sp = speedAt(track, f.d);
+  if (sp !== null && f.phase==='travel'){
+    const s = U.speed(sp);
+    cols.push({label:'VITESSE', value:fmt(s.v,1), unit:s.u});
+  }
+  return cols;
+}
+function drawStats(f, st, acc){
+  const a = f.hud * (1-f.endA);
+  ctx.globalAlpha = a; ctx.textAlign='left';
+  const cols = statCols(f, st);
+  const baseY = H - 78;
+  let x = M;
+  cols.forEach((c,i)=>{
+    ctx.font=FONT(600,15);
+    const lw = trackedWidth(c.label, 2.4);
+    ctx.font=FONT(700,58); const vw = ctx.measureText(c.value).width;
+    ctx.font=FONT(500,24); const uw = ctx.measureText(' '+c.unit).width;
+    const cw = Math.max(lw, vw+uw);
+
+    shadow(14,0.8,2);
+    ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.font=FONT(600,15);
+    tracked(c.label, x, baseY-52, 2.4);
+    ctx.fillStyle = i===0 ? acc : '#fff'; ctx.font=FONT(700,58);
+    ctx.fillText(c.value, x, baseY);
+    ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.font=FONT(500,24);
+    ctx.fillText(' '+c.unit, x+vw, baseY);
+    noShadow();
+
+    x += cw + 46;
+    if (i < cols.length-1){
+      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(x-24, baseY-52, 1.5, 54);
+    }
+  });
+  if ($('#showProfile').checked && track.hasEle) drawProfile(f, acc, a);
+  ctx.globalAlpha=1;
+}
+
+/* ------------------------------------------------ profil altimétrique */
+function drawProfile(f, acc, alpha){
+  const pw=560, ph=132, px=W-M-pw, py=H-78-ph+8;
+  const S=track.samples, range=Math.max(30, track.maxEle-track.minEle);
+  const yOf = e => py+ph - ((e-track.minEle)/range)*(ph-16) - 6;
+  const xOf = d => px + (d/track.total)*pw;
+
+  ctx.globalAlpha = alpha*0.9;
+  // silhouette complète
+  ctx.beginPath(); ctx.moveTo(px, py+ph);
+  for (let i=0;i<S.length;i+=Math.max(1,Math.floor(S.length/pw))) ctx.lineTo(xOf(S[i].d), yOf(S[i].ele));
+  ctx.lineTo(xOf(track.total), yOf(S[S.length-1].ele)); ctx.lineTo(px+pw, py+ph); ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.16)'; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // portion parcourue, dans la couleur de chaque tronçon
+  const cx0 = xOf(f.d);
+  for (const g of segments()){
+    const x0 = xOf(g.d0), x1 = Math.min(xOf(g.d1), cx0);
+    if (x1 <= x0) continue;
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, py-10, x1-x0, ph+20); ctx.clip();
+    ctx.beginPath(); ctx.moveTo(px, py+ph);
+    for (let i=0;i<S.length;i+=Math.max(1,Math.floor(S.length/pw))) ctx.lineTo(xOf(S[i].d), yOf(S[i].ele));
+    ctx.lineTo(px+pw, py+ph); ctx.closePath();
+    const gr=ctx.createLinearGradient(0,py,0,py+ph);
+    gr.addColorStop(0, rgba(g.color,0.85)); gr.addColorStop(1, rgba(g.color,0.22));
+    ctx.fillStyle=gr; ctx.fill();
+    ctx.restore();
+  }
+
+  // repères des points de passage
+  for (const w of wpTimes()){
+    const wx=xOf(w.d);
+    ctx.fillStyle = w.d<=f.d ? rgba(colorAt(w.d),0.95) : 'rgba(255,255,255,0.45)';
+    ctx.fillRect(wx-1, py-6, 2, ph+6);
+  }
+  // curseur
+  const cx=xOf(f.d), cy=yOf(st_ele(f.d));
+  ctx.strokeStyle=rgba(acc,0.9); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,py-8); ctx.lineTo(cx,py+ph); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,5.5,0,7); ctx.fill();
+
+  ctx.globalAlpha=alpha*0.72; ctx.fillStyle='#fff'; ctx.font=FONT(500,15); ctx.textAlign='right';
+  const hi=U.elev(track.maxEle), lo=U.elev(track.minEle);
+  ctx.fillText(fmt(hi.v,0)+' '+hi.u, px-12, py+14);
+  ctx.fillText(fmt(lo.v,0)+' '+lo.u, px-12, py+ph);
+  ctx.textAlign='left'; ctx.globalAlpha=alpha;
+}
+const st_ele = d => stateAt(track, d).ele;
+
+/* --------------------------------------------------- position courante */
+function drawMarker(f, st, acc){
+  const p = map.project([st.lon, st.lat]);
+  if (!isFinite(p.x) || p.x<-200 || p.x>W+200 || p.y<-200 || p.y>H+200) return;
+  const pulse = 0.5 + 0.5*Math.sin(f.t*3.4);
+  const g = ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,54);
+  g.addColorStop(0, rgba(acc,0.45)); g.addColorStop(1, rgba(acc,0));
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,54,0,7); ctx.fill();
+
+  ctx.strokeStyle=rgba(acc, 0.55*(1-pulse*0.7)); ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(p.x,p.y, 18+pulse*16, 0, 7); ctx.stroke();
+
+  shadow(14,0.6,2);
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(p.x,p.y,16,0,7); ctx.fill();
+  noShadow();
+  ctx.fillStyle=acc; ctx.beginPath(); ctx.arc(p.x,p.y,11,0,7); ctx.fill();
+
+  // chevron d'orientation (relatif au cap de la caméra)
+  if (f.phase === 'outro' && f.endA > 0.2) return;
+  const ang = (st.heading - map.getBearing() - 90) * D2R;
+  ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(ang);
+  ctx.fillStyle='#fff'; shadow(8,0.5,1);
+  ctx.beginPath(); ctx.moveTo(34,0); ctx.lineTo(19,-10); ctx.lineTo(23,0); ctx.lineTo(19,10); ctx.closePath(); ctx.fill();
+  noShadow(); ctx.restore();
+}
+
+/* ------------------------------ départs / arrivées des autres traces */
+function drawOtherEndpoints(f){
+  const a = 0.85 * (1 - f.endA);
+  if (a < 0.02) return;
+  ctx.textAlign='left';
+  // repères de la trace active : une étiquette grise qui tomberait dessus est
+  // masquée (typiquement une trace qui part là où la trace active arrive)
+  const busy = waypoints.map(w => map.project([w.lon, w.lat]));
+  for (const t of tracks){
+    if (t.id === activeId) continue;
+    for (const w of t.waypoints){
+      if (!w.kind) continue;
+      const p = map.project([w.lon, w.lat]);
+      if (!isFinite(p.x) || p.x<-150 || p.x>W+150 || p.y<-150 || p.y>H+120) continue;
+      const hideLabel = busy.some(q => Math.abs(q.x-p.x) < 160 && Math.abs(q.y-p.y) < 40);
+      ctx.globalAlpha = a;
+      const stem = 24, r = 8;
+      shadow(8,0.5,1);
+      ctx.strokeStyle='rgba(190,198,210,0.9)'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x,p.y-stem); ctx.stroke();
+      ctx.fillStyle='#8d96a5';
+      ctx.beginPath(); ctx.arc(p.x, p.y-stem-r+2, r, 0, 7); ctx.fill();
+      ctx.strokeStyle='rgba(235,239,245,0.9)'; ctx.lineWidth=2; ctx.stroke();
+      noShadow();
+      if (hideLabel) continue;
+      ctx.font=FONT(500,18);
+      const tw = ctx.measureText(w.name).width, lx = p.x + r + 9, ly = p.y - stem - r + 2;
+      ctx.fillStyle='rgba(0,0,0,0.38)'; rrect(lx, ly-15, tw+18, 30, 15); ctx.fill();
+      ctx.fillStyle='rgba(215,221,230,0.9)'; ctx.fillText(w.name, lx+9, ly+6);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ------------------------------------------------------ rose des vents */
+/* Cadran de marine : la carte tourne, le cadran tourne avec elle pour que
+   le N désigne toujours le vrai nord ; la ligne de foi (triangle fixe en
+   haut) et le cap affiché dessous donnent la direction de la caméra. Le
+   cadran est pré-rendu une fois, puis simplement pivoté à chaque image. */
+const ROSE = { r:74, cx:52+74, cy:46+74 };
+const WINDS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+let roseCard = null;
+function buildRoseCard(){
+  const R = ROSE.r, SC = 2, half = R + 4;
+  const c = document.createElement('canvas'); c.width = c.height = half*2*SC;
+  const g = c.getContext('2d'); g.scale(SC,SC); g.translate(half, half);
+  const pol = (deg, r) => [Math.sin(deg*D2R)*r, -Math.cos(deg*D2R)*r];
+
+  // couronne graduée
+  g.strokeStyle='rgba(255,255,255,0.22)'; g.lineWidth=1;
+  g.beginPath(); g.arc(0,0,R-18,0,7); g.stroke();
+  for (let deg=0; deg<360; deg+=5){
+    const major = deg%45===0, mid = deg%15===0;
+    const len = major ? 11 : mid ? 7 : 4;
+    g.strokeStyle = major ? 'rgba(255,255,255,0.95)' : mid ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.32)';
+    g.lineWidth = major ? 2 : 1.2;
+    const [x0,y0] = pol(deg, R-6-len), [x1,y1] = pol(deg, R-6);
+    g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke();
+  }
+  // étoile à 16 branches, chaque branche en deux demi-faces (clair / ombré)
+  const branch = (deg, len, w, light, dark) => {
+    const tip = pol(deg, len), l = pol(deg-90, w), r = pol(deg+90, w);
+    g.fillStyle = light; g.beginPath(); g.moveTo(0,0); g.lineTo(...tip); g.lineTo(...l); g.closePath(); g.fill();
+    g.fillStyle = dark;  g.beginPath(); g.moveTo(0,0); g.lineTo(...tip); g.lineTo(...r); g.closePath(); g.fill();
+  };
+  const L = R - 36;
+  for (let k=0;k<8;k++) branch(22.5+45*k, L*0.45, 3.5, '#c3cbd6', '#6f7988');
+  for (let k=0;k<4;k++) branch(45+90*k,   L*0.72, 5.5, '#e3e8ef', '#8792a3');
+  for (let k=0;k<4;k++) branch(90*k, L, 8, k===0 ? '#ff6f61' : '#f5f7fa', k===0 ? '#b83227' : '#97a1b1');
+  // moyeu
+  g.fillStyle='#1b2230'; g.beginPath(); g.arc(0,0,5,0,7); g.fill();
+  g.strokeStyle='rgba(255,255,255,0.9)'; g.lineWidth=1.5; g.stroke();
+  // lettres, orientées comme sur un compas
+  g.textAlign='center'; g.textBaseline='middle';
+  for (const [t, deg] of [['N',0],['E',90],['S',180],['O',270]]){
+    g.save(); g.rotate(deg*D2R);
+    g.font = FONT(800, t==='N' ? 17 : 15);
+    g.fillStyle = t==='N' ? '#ff6f61' : 'rgba(255,255,255,0.92)';
+    g.fillText(t, 0, -(R-26));
+    g.restore();
+  }
+  return c;
+}
+function drawRose(f){
+  if (!$('#showCompass').checked) return;
+  if (!roseCard) roseCard = buildRoseCard();
+  const { r:R, cx, cy } = ROSE;
+  ctx.globalAlpha = 1 - 0.6*f.endA;
+
+  // lunette fixe
+  shadow(20,0.55,4);
+  const bg = ctx.createRadialGradient(cx, cy-R*0.35, R*0.1, cx, cy, R+4);
+  bg.addColorStop(0,'rgba(38,47,62,0.80)'); bg.addColorStop(1,'rgba(8,11,17,0.86)');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(cx,cy,R+4,0,7); ctx.fill();
+  noShadow();
+  ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,R-1,0,7); ctx.stroke();
+
+  // cadran tournant
+  const b = map.getBearing();
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-b*D2R);
+  ctx.drawImage(roseCard, -(R+4), -(R+4), (R+4)*2, (R+4)*2);
+  ctx.restore();
+
+  // reflet de verre
+  const gl = ctx.createLinearGradient(cx, cy-R, cx, cy);
+  gl.addColorStop(0,'rgba(255,255,255,0.13)'); gl.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(cx, cy-R*0.42, R*0.78, R*0.5, 0, 0, 7); ctx.fill();
+
+  // cap réel : direction du déplacement sur la trace, dans la couleur du
+  // tronçon en cours. Placé sur la lunette à l'angle (cap réel − cap caméra) ;
+  // plus grand que la ligne de foi, il reste visible quand les deux coïncident.
+  if (track){
+    const course = stateAt(track, f.d).heading;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((course - b)*D2R);
+    shadow(8,0.6,1);
+    ctx.fillStyle = colorAt(f.d);
+    ctx.beginPath(); ctx.moveTo(0, -R+7); ctx.lineTo(-10, -R-14); ctx.lineTo(10, -R-14); ctx.closePath(); ctx.fill();
+    noShadow();
+    ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore();
+  }
+  // ligne de foi (direction de la caméra), fixe
+  ctx.fillStyle='#fff'; shadow(6,0.6,1);
+  ctx.beginPath(); ctx.moveTo(cx, cy-R+3); ctx.lineTo(cx-6, cy-R-9); ctx.lineTo(cx+6, cy-R-9); ctx.closePath(); ctx.fill();
+
+  // cap de la caméra
+  const hd = ((b % 360) + 360) % 360;
+  ctx.font = FONT(600,17); ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.9)'; shadow(8,0.75,1);
+  ctx.fillText(`${WINDS[Math.round(hd/22.5)%16]} · ${String(Math.round(hd)%360).padStart(3,'0')}°`, cx, cy+R+28);
+  noShadow(); ctx.textAlign='left'; ctx.globalAlpha = 1;
+}
+
+/* ---------------------------------------------------------------- mini-carte */
+/* Vignette nord en haut, à droite de la rose des vents : l'emprise de la trace
+   active agrandie de 20 %, les autres traces en gris, le parcours effectué en
+   couleur, la position et un cône indiquant la direction de la caméra.
+   Le fond est capturé une fois par une seconde carte MapLibre, hors écran
+   (elle ne perturbe jamais la caméra principale), puis réutilisé à chaque
+   image. Elle apparaît quand le titre s'efface. */
+const MINI = { x: ROSE.cx + ROSE.r + 30, y: 42, maxW: 330, maxH: 196 };
+let miniMap = null, mini = null, miniToken = 0, miniTimer = null;
+const mercX = lon => (lon + 180) / 360;
+const mercY = lat => { const s = Math.sin(clamp(lat,-85,85)*D2R); return 0.5 - Math.log((1+s)/(1-s))/(4*Math.PI); };
+const unmercY = y => Math.atan(Math.sinh(Math.PI*(1 - 2*y))) * R2D;
+
+function scheduleMinimap(){
+  clearTimeout(miniTimer);
+  miniTimer = setTimeout(() => { if (track) buildMinimap(); }, 120);
+}
+function miniStyle(){ const st = buildStyle(currentBasemap); delete st.sky; return st; }
+async function waitMapTiles(m, timeout=9000){
+  const t0 = performance.now();
+  m.redraw();
+  while (performance.now()-t0 < timeout){
+    if (m.isStyleLoaded() && m.areTilesLoaded()){ m.redraw(); if (m.areTilesLoaded()) return true; }
+    await delay(60); m.redraw();
+  }
+  return false;
+}
+async function buildMinimap(){
+  if (!track) { mini = null; return; }
+  const token = ++miniToken, tk = track;
+  // emprise en Mercator, +20 %, sans vignette trop étroite
+  const [[w0,s0],[e0,n0]] = tk.bounds;
+  const cx = (mercX(w0)+mercX(e0))/2, cy = (mercY(n0)+mercY(s0))/2;
+  let dx = (mercX(e0)-mercX(w0))*1.2, dy = (mercY(s0)-mercY(n0))*1.2;
+  const floor = Math.max(dx, dy)*0.6;
+  dx = Math.max(dx, floor, 1e-7); dy = Math.max(dy, floor, 1e-7);
+  const scale = Math.min(MINI.maxW/dx, MINI.maxH/dy);
+  const w = Math.round(dx*scale), h = Math.round(dy*scale);
+  const bx = cx - dx/2, by = cy - dy/2;
+  const px = (lon, lat) => [(mercX(lon)-bx)*scale, (mercY(lat)-by)*scale];
+
+  const wrap = $('#miniWrap'); wrap.style.width = w+'px'; wrap.style.height = h+'px';
+  try {
+    if (!miniMap){
+      miniMap = new maplibregl.Map({ container:'mini', style:miniStyle(), center:[0,0], zoom:1,
+        interactive:false, attributionControl:false, preserveDrawingBuffer:true, fadeDuration:0 });
+      miniMap._bm = currentBasemap;
+      await Promise.race([ new Promise(r => miniMap.once('load', r)), delay(9000) ]);
+    } else if (miniMap._bm !== currentBasemap){
+      miniMap._bm = currentBasemap;
+      miniMap.setStyle(miniStyle());
+      await Promise.race([ new Promise(r => miniMap.once('idle', r)), delay(9000) ]);
+    }
+    if (token !== miniToken) return;
+    miniMap.resize();
+    // zoom tel que l'emprise remplisse exactement la vignette (monde = 512·2^z px)
+    miniMap.jumpTo({ center:[cx*360-180, unmercY(cy)], zoom:Math.log2(w/(dx*512)), bearing:0, pitch:0 });
+    await waitMapTiles(miniMap);
+    if (token !== miniToken) return;
+    const img = document.createElement('canvas'); img.width = w*2; img.height = h*2;
+    img.getContext('2d').drawImage(miniMap.getCanvas(), 0, 0, w*2, h*2);
+    const pts = new Float32Array(tk.samples.length*2);
+    tk.samples.forEach((s,i) => { const [x,y] = px(s.lon, s.lat); pts[2*i] = x; pts[2*i+1] = y; });
+    mini = { img, w, h, px, pts, track:tk };
+    renderMiniBase();
+    if (!exporting && !playing) refreshPreviewSoon();
+  } catch(e){ console.warn('mini-carte', e); mini = null; }
+}
+/* Fond + traces fixes (les autres en gris, la trace active en clair). */
+function renderMiniBase(){
+  if (!mini) return;
+  const { w, h, px } = mini;
+  const base = document.createElement('canvas'); base.width = w*2; base.height = h*2;
+  const b = base.getContext('2d'); b.scale(2,2);
+  b.drawImage(mini.img, 0, 0, w, h);
+  b.fillStyle = 'rgba(5,8,12,0.25)'; b.fillRect(0, 0, w, h);
+  b.lineCap = 'round'; b.lineJoin = 'round';
+  const line = (coords, style, width) => {
+    b.beginPath();
+    const step = Math.max(1, Math.floor(coords.length/600));
+    coords.forEach(([lon,lat], i) => { if (i%step && i !== coords.length-1) return; const [x,y] = px(lon,lat); i ? b.lineTo(x,y) : b.moveTo(x,y); });
+    b.strokeStyle = style; b.lineWidth = width; b.stroke();
+  };
+  for (const t of tracks) if (t.track !== mini.track) line(t.track.coords, 'rgba(190,198,210,0.75)', 1.3);
+  mini.base = base;
+}
+function drawMinimap(f){
+  if (!$('#showMinimap').checked || !mini || !mini.base || mini.track !== track) return;
+  const a = f.hud * (1 - f.titleA) * (1 - f.endA);
+  if (a < 0.02) return;
+  const X = MINI.x, Y = MINI.y, { w, h, pts } = mini;
+  ctx.globalAlpha = a;
+  shadow(18,0.5,3); ctx.fillStyle = '#05070a'; rrect(X, Y, w, h, 12); ctx.fill(); noShadow();
+  ctx.save(); rrect(X, Y, w, h, 12); ctx.clip(); ctx.translate(X, Y);
+  ctx.drawImage(mini.base, 0, 0, w, h);
+
+  // trace complète, estompée, dans les couleurs de ses tronçons
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const segs = segments(), last = pts.length/2 - 1;
+  ctx.globalAlpha = a*0.5; ctx.lineWidth = 1.8;
+  for (const g of segs){
+    const k0 = Math.floor(g.d0/track.step), k1 = Math.min(Math.ceil(g.d1/track.step), last);
+    ctx.beginPath(); ctx.moveTo(pts[2*k0], pts[2*k0+1]);
+    for (let k=k0+1; k<=k1; k++) ctx.lineTo(pts[2*k], pts[2*k+1]);
+    ctx.strokeStyle = g.color; ctx.stroke();
+  }
+  ctx.globalAlpha = a;
+  // parcours effectué, tronçon par tronçon
+  ctx.lineWidth = 3.2;
+  const st = stateAt(track, f.d), [cx, cy] = mini.px(st.lon, st.lat);
+  for (const g of segs){
+    const d1 = Math.min(g.d1, f.d);
+    if (d1 <= g.d0) continue;
+    const k0 = Math.floor(g.d0/track.step), k1 = Math.min(Math.floor(d1/track.step), pts.length/2-1);
+    ctx.beginPath(); ctx.moveTo(pts[2*k0], pts[2*k0+1]);
+    for (let k=k0+1; k<=k1; k++) ctx.lineTo(pts[2*k], pts[2*k+1]);
+    if (d1 === f.d) ctx.lineTo(cx, cy);
+    ctx.strokeStyle = g.color; ctx.stroke();
+  }
+  // cône de vue de la caméra
+  const brg = map.getBearing()*D2R - Math.PI/2, L = Math.max(w, h)*0.24, half = 30*D2R;
+  const cone = ctx.createRadialGradient(cx, cy, 2, cx, cy, L);
+  cone.addColorStop(0, 'rgba(255,255,255,0.45)'); cone.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = cone;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, L, brg-half, brg+half); ctx.closePath(); ctx.fill();
+  // position
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, 5.5, 0, 7); ctx.fill();
+  ctx.fillStyle = colorAt(f.d); ctx.beginPath(); ctx.arc(cx, cy, 3.6, 0, 7); ctx.fill();
+  ctx.restore();
+
+  // cadre et repère nord
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; rrect(X, Y, w, h, 12); ctx.stroke();
+  const nx = X + w - 17, ny = Y + 15;
+  ctx.fillStyle = '#ff6f61';
+  ctx.beginPath(); ctx.moveTo(nx, ny-9); ctx.lineTo(nx-5, ny+1); ctx.lineTo(nx+5, ny+1); ctx.closePath(); ctx.fill();
+  ctx.font = FONT(800,12); ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; shadow(4,0.8,1);
+  ctx.fillText('N', nx, ny+14); noShadow(); ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+}
+
+/* --------------------------------------------------- points de passage */
+function drawWaypoints(f, acc){
+  ctx.textAlign='left';
+  for (const w of wpTimes()){
+    const p = map.project([w.lon, w.lat]);
+    if (!isFinite(p.x) || p.x<-150 || p.x>W+150 || p.y<-150 || p.y>H+120) continue;
+    const reached = f.d >= w.d - 1;
+    const age = f.t - (w.tReach ?? 1e9);
+    const pop = reached && age>=0 && age<0.9 ? 1 + Math.sin(clamp(age/0.9,0,1)*Math.PI)*0.45 : 1;
+    const a = (reached ? 1 : 0.55) * (1 - f.endA);
+    if (a < 0.02) continue;
+
+    ctx.globalAlpha=a;
+    const wc = colorAt(w.d);
+    const r = 12*pop, stem=32;
+    ctx.strokeStyle= reached ? rgba(wc,0.9) : 'rgba(255,255,255,0.65)';
+    ctx.lineWidth=3; shadow(10,0.6,2);
+    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x,p.y-stem); ctx.stroke();
+    ctx.fillStyle = reached ? wc : 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(p.x, p.y-stem-r+2, r, 0, 7); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,7); ctx.fill();
+    noShadow();
+
+    // étiquette
+    ctx.font=FONT(600,22);
+    const tw = ctx.measureText(w.name).width;
+    const lx = p.x + r + 12, ly = p.y - stem - r + 2;
+    ctx.fillStyle = reached ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.42)';
+    rrect(lx, ly-19, tw+24, 38, 19); ctx.fill();
+    ctx.fillStyle = reached ? '#fff' : 'rgba(255,255,255,0.85)';
+    ctx.fillText(w.name, lx+12, ly+8);
+    ctx.globalAlpha=1;
+  }
+}
+
+/* --------------------------------------------- bandeau d'arrivée au WP */
+function drawBanner(f, acc){
+  if (f.phase==='intro' || f.endA > 0.6) return;
+  let best=null;
+  for (const w of wpTimes()) if (w.tReach<=f.t && (!best || w.tReach>best.tReach)) best=w;
+  if (!best) return;
+  const age=f.t-best.tReach, DUR=3.4;
+  if (age>DUR) return;
+  const a = clamp(age/0.45,0,1) * clamp((DUR-age)/0.6,0,1) * (1-f.endA/0.6);
+  if (a<=0.01) return;
+
+  ctx.globalAlpha=a; ctx.textAlign='center';
+  const y = 132 + (1-clamp(age/0.45,0,1))*-24;
+  ctx.font=FONT(700,46); const tw=ctx.measureText(best.name).width;
+  const dd=U.dist(best.d), sub=`km ${fmt(dd.v,1)}`;
+  ctx.font=FONT(500,22); const sw=ctx.measureText(sub).width;
+  const bw=Math.max(tw,sw)+96, bx=W/2-bw/2;
+
+  shadow(30,0.5,6);
+  ctx.fillStyle='rgba(12,15,20,0.72)'; rrect(bx, y-52, bw, 108, 16); ctx.fill();
+  noShadow();
+  ctx.fillStyle=colorAt(best.d); rrect(bx, y-52, 6, 108, 3); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font=FONT(700,46); ctx.fillText(best.name, W/2, y+2);
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=FONT(500,22); ctx.fillText(sub, W/2, y+36);
+  ctx.textAlign='left'; ctx.globalAlpha=1;
+}
+
+/* ------------------------------------------------------- carte de fin */
+function drawEndCard(f, acc){
+  const a=f.endA;
+  ctx.globalAlpha=a*0.55; ctx.fillStyle='#05070a'; ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=a; ctx.textAlign='center';
+  const y = H/2 + 120 + (1-a)*26;
+  const title=$('#title').value.trim();
+  if (title){ shadow(24,0.7,3); ctx.fillStyle='#fff'; ctx.font=FONT(700,64); ctx.fillText(title, W/2, y-96); noShadow(); }
+  const sub=$('#subtitle').value.trim();
+  if (sub){ ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font=FONT(500,26); ctx.fillText(sub, W/2, y-54); }
+
+  const d=U.dist(track.total), e=U.elev(track.gain);
+  const items=[{v:fmt(d.v,1),u:d.u,l:'DISTANCE'}];
+  if (track.hasEle) items.push({v:fmt(e.v,0),u:e.u,l:'DÉNIVELÉ +'});
+  if (track.timed){
+    const h=(track.t1-track.t0)/3600000;
+    items.push({v:`${Math.floor(h)}h${String(Math.round((h%1)*60)).padStart(2,'0')}`,u:'',l:'DURÉE'});
+  }
+
+  const colW=300, totalW=colW*items.length, x0=W/2-totalW/2;
+  items.forEach((it,i)=>{
+    const cx=x0+colW*i+colW/2;
+    ctx.fillStyle= i===0 ? acc : '#fff'; ctx.font=FONT(700,62);
+    const vw=ctx.measureText(it.v).width;
+    ctx.textAlign='left';
+    ctx.fillText(it.v, cx-vw/2, y+14);
+    if (it.u){ ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=FONT(500,26); ctx.fillText(' '+it.u, cx+vw/2, y+14); }
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.font=FONT(600,15);
+    const lw=trackedWidth(it.l,2.4); tracked(it.l, cx-lw/2, y+48, 2.4);
+    if (i<items.length-1){ ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(x0+colW*(i+1)-1, y-40, 1.5, 60); }
+  });
+  ctx.textAlign='left'; ctx.globalAlpha=1;
+}
+</script>
+
+<script>
+/* ======================================================================== */
+/*  LECTURE / APERÇU                                                        */
+/* ======================================================================== */
+let playing=false, curT=0, rafId=null, lastTs=0, exporting=false, editing=false;
+
+/* Les tuiles arrivent de façon asynchrone : on recompose dès que la carte
+   a fini de charger, sinon l'aperçu resterait figé sur une image incomplète. */
+map.on('idle', ()=>{
+  if (!track || playing || exporting || editing || !styleReady) return;
+  if (!map.areTilesLoaded()) return;
+  composite(frameAt(curT));
+});
+
+function renderPreview(){
+  if (!track){
+    if (ensureStyle()){ ctx.fillStyle='#0c0f14'; ctx.fillRect(0,0,W,H); drawHUD({}); }
+    return;
+  }
+  if (!ensureStyle()){ refreshPreviewSoon(); return; }   // style encore en cours de chargement
+  const f = frameAt(curT);
+  applyCam(f.cam); pushDone(f.d);
+  map.redraw();                       // rendu synchrone : aucun décalage d'image
+  updateClock(f);
+  if (!playing){
+    // tuiles incomplètes : on montre quand même l'image (retour immédiat au
+    // déplacement de la réglette) mais on repasse dès qu'elles sont arrivées
+    if (!map.areTilesLoaded() || mapIsBlank()) refreshPreviewSoon();
+    if (mapIsBlank()) return;         // ne jamais écraser l'aperçu par du vide
+  }
+  composite(f);
+}
+function updateClock(f){
+  $('#clock').textContent = `${mmss(curT)} / ${mmss(TL.total)}`;
+  $('#phase').textContent = !track ? '—' : {intro:'Intro', travel:'Parcours', outro:'Final'}[f?f.phase:'intro'];
+  if (document.activeElement !== $('#scrub')) $('#scrub').value = Math.round(clamp(curT/TL.total,0,1)*1000);
+}
+function setPlaying(v){
+  if (!track) v=false;
+  playing=v; $('#play').textContent = v ? '❚❚' : '▶';
+  if (v){
+    if (curT >= TL.total-0.01) curT = 0;
+    lastTs = performance.now();
+    rafId = requestAnimationFrame(tick);
+  } else if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
+}
+function tick(ts){
+  if (!playing) return;
+  curT = Math.min(TL.total, curT + (ts-lastTs)/1000);
+  lastTs = ts;
+  renderPreview();
+  if (curT >= TL.total) { setPlaying(false); return; }
+  rafId = requestAnimationFrame(tick);
+}
+
+/* ======================================================================== */
+/*  CHARGEMENT GPX                                                          */
+/* ======================================================================== */
+function snapToTrack(lon, lat, tk=track){
+  let best=0, bd=Infinity;
+  const S=tk.samples;
+  for (let i=0;i<S.length;i++){
+    const dx=(S[i].lon-lon)*Math.cos(lat*D2R), dy=S[i].lat-lat;
+    const dd=dx*dx+dy*dy;
+    if (dd<bd){ bd=dd; best=i; }
+  }
+  const s=S[best];
+  return { d:s.d, lon:s.lon, lat:s.lat, far: haversine({lon,lat},{lon:s.lon,lat:s.lat}) > 150 };
+}
+
+/* ---------------------------------------------------------------------------
+   Plusieurs traces peuvent être chargées ; une seule est « active » : c'est
+   elle que la caméra suit et qui est exportée. Chaque trace garde ses propres
+   points de passage, titre, sous-titre, durée et noms de départ/arrivée ; les
+   globales `track` et `waypoints` désignent toujours celles de la trace active.
+--------------------------------------------------------------------------- */
+let tracks = [], activeId = null, nextTrackId = 1, projectBase = null;
+const activeEntry = () => tracks.find(t => t.id === activeId) || null;
+
+function defaultSubtitle(tk){
+  const d0 = tk.timed ? new Date(tk.t0) : null, dd = U.dist(tk.total);
+  return [d0 ? d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : null,
+          `${fmt(dd.v,1)} ${dd.u}`,
+          tk.hasEle ? `${fmt(tk.gain,0)} m D+` : null].filter(Boolean).join(' · ');
+}
+const defaultDur = tk => clamp(Math.round(tk.total/1000*4), 20, 120);   // ~4 s par km
+const cleanColor = c => /^#[0-9a-f]{6}$/i.test(c||'') ? c : null;
+
+/* Crée une trace depuis le texte GPX. `saved` rejoue une trace de projet. */
+function buildEntry(text, filename, saved){
+  const g  = parseGPX(text);
+  const tk = buildTrack(g.points);
+  const e  = { id:nextTrackId++, gpxText:text, gpxName:filename || 'trace.gpx', g, track:tk };
+  if (saved){
+    e.waypoints = (saved.waypoints || []).map(w=>{
+      const d = clamp(+w.d || 0, 0, tk.total), s = stateAt(tk, d);
+      return { name:w.name || 'Point', d, lon:s.lon, lat:s.lat, kind:w.kind || null, color:cleanColor(w.color) };
+    }).sort((a,b)=>a.d-b.d);
+    e.title     = saved.title ?? (g.name || '');
+    e.subtitle  = saved.subtitle ?? defaultSubtitle(tk);
+    e.dur       = +saved.dur || defaultDur(tk);
+    e.startName = saved.startName ?? 'Départ';
+    e.endName   = saved.endName ?? 'Arrivée';
+  } else {
+    e.waypoints = g.waypoints.map(w=>{
+      const s = snapToTrack(w.lon, w.lat, tk);
+      return { name:w.name || 'Point', d:s.d, lon: s.far?w.lon:s.lon, lat: s.far?w.lat:s.lat, kind:null, color:null };
+    }).sort((a,b)=>a.d-b.d);
+    e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
+    e.subtitle  = defaultSubtitle(tk);
+    e.dur       = defaultDur(tk);
+    e.startName = 'Départ';
+    e.endName   = 'Arrivée';
+    adoptEndpoints(e);
+  }
+  return e;
+}
+
+/* Un <wpt> situé à une extrémité devient le repère de départ/arrivée et donne
+   son nom ; sinon le repère est créé avec le nom proposé. */
+function adoptEndpoints(e){
+  const tk = e.track, tol = clamp(tk.total*0.01, 25, 200);
+  for (const kind of ['start','end']){
+    const target = kind==='start' ? 0 : tk.total, key = kind==='start' ? 'startName' : 'endName';
+    const near = e.waypoints.find(w => !w.kind && Math.abs(w.d-target) <= tol);
+    if (near){ near.kind = kind; e[key] = near.name; }
+    else {
+      const s = stateAt(tk, target);
+      e.waypoints.push({ name:e[key], d:target, lon:s.lon, lat:s.lat, kind, color:null });
+    }
+  }
+  e.waypoints.sort((a,b)=>a.d-b.d);
+}
+
+/* Rend une trace active : la caméra, le panneau et l'aperçu basculent dessus. */
+function activate(id){
+  const e = tracks.find(t => t.id === id);
+  if (!e || exporting) return;
+  if (editing) setEditing(false);
+  setPlaying(false);
+  activeId = id; track = e.track; waypoints = e.waypoints;
+  $('#title').value = e.title;         $('#subtitle').value = e.subtitle;
+  $('#dur').value = e.dur;
+  $('#startName').value = e.startName; $('#endName').value = e.endName;
+  syncLabels(); rebuildMotion();
+  lastDoneIdx=-1; invalidateOverview(); curT=0;
+  mini = null; scheduleMinimap();
+  pushRoute(); renderWpList(); showTrackInfo(); renderTrackList();
+  renderPreview(); refreshPreviewSoon();
+}
+function clearActive(){
+  if (editing) setEditing(false);
+  setPlaying(false);
+  activeId = null; track = null; waypoints = [];
+  $('#title').value = ''; $('#subtitle').value = '';
+  pushRoute();
+  if (map.getSource('done')) map.getSource('done').setData(EMPTY);
+  renderWpList(); renderTrackList(); updateClock();
+  $('#trackInfo').textContent = 'Aucune trace chargée.';
+  renderPreview();
+}
+function removeTrack(id){
+  if (exporting) return;
+  const i = tracks.findIndex(t => t.id === id);
+  if (i < 0) return;
+  tracks.splice(i, 1);
+  if (id !== activeId){ pushRoute(); renderTrackList(); renderPreview(); return; }
+  if (tracks.length) activate(tracks[Math.min(i, tracks.length-1)].id);
+  else clearActive();
+}
+/* Les champs propres à une trace sont recopiés dans sa fiche à chaque saisie. */
+function rememberTrackFields(){
+  const e = activeEntry(); if (!e) return;
+  e.title = $('#title').value;          e.subtitle = $('#subtitle').value;
+  e.dur = +$('#dur').value;
+  e.startName = $('#startName').value; e.endName = $('#endName').value;
+}
+
+function renderTrackList(){
+  const ul = $('#trackList'); ul.innerHTML = '';
+  for (const t of tracks){
+    const li = document.createElement('li');
+    if (t.id === activeId) li.className = 'on';
+    const dot = document.createElement('span'); dot.className = 'dot';
+    const nm  = document.createElement('span'); nm.className = 'nm';
+    nm.textContent = t.title || t.gpxName; nm.title = t.gpxName;
+    const ds  = document.createElement('span'); ds.className = 'ds';
+    const dd = U.dist(t.track.total); ds.textContent = `${fmt(dd.v,1)} ${dd.u}`;
+    const del = document.createElement('button'); del.className = 'del'; del.textContent = '×'; del.title = 'Retirer cette trace';
+    del.onclick = ev => { ev.stopPropagation(); removeTrack(t.id); };
+    li.onclick = () => { if (t.id !== activeId) activate(t.id); };
+    li.append(dot, nm, ds, del); ul.appendChild(li);
+  }
+  $('#trackHint').style.display = tracks.length > 1 ? '' : 'none';
+}
+
+/* ---- chargement de fichiers --------------------------------------------- */
+async function loadFiles(files, dirName){
+  files = [...files];
+  const proj = files.filter(f => /\.json$/i.test(f.name));
+  const gpx  = files.filter(f => /\.gpx$/i.test(f.name))
+                    .sort((a,b) => a.name.localeCompare(b.name, 'fr', {numeric:true}));
+  if (!gpx.length && proj.length){
+    try { return openProject(JSON.parse(await proj[0].text())); }
+    catch(e){ console.error(e); return toast('Projet illisible : '+(e.message||e), true); }
+  }
+  if (!gpx.length) return toast('Aucun fichier .gpx trouvé.', true);
+
+  const added = [], errors = [];
+  for (const f of gpx){
+    try {
+      const text = await f.text();
+      if (tracks.some(t => t.gpxText === text)) continue;          // déjà chargée
+      const e = buildEntry(text, f.name);
+      tracks.push(e); added.push(e);
+    } catch(err){ errors.push(`${f.name} : ${err.message}`); }
+  }
+  if (dirName) projectBase = dirName;
+  if (added.length) activate(added[0].id);
+  else renderTrackList();
+  if (errors.length) toast(`${errors.length} fichier(s) ignoré(s) — ${errors[0]}`, true);
+  else if (added.length === 1){
+    const dd = U.dist(added[0].track.total);
+    toast(`Trace chargée : ${added[0].title} · ${fmt(dd.v,1)} ${dd.u}`);
+  } else if (added.length) toast(`${added.length} traces chargées`);
+  else toast('Ces traces sont déjà chargées.');
+}
+const loadGPX = file => loadFiles([file]);
+
+/* Dépôt : fichiers et dossiers (parcours récursif). Les entrées doivent être
+   lues pendant l'événement, avant toute attente. */
+function entriesFromDrop(dt){
+  return [...(dt.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+}
+async function filesFromEntries(entries){
+  const out = []; let dirName = null;
+  const walk = async entry => {
+    if (entry.isFile) out.push(await new Promise((res,rej) => entry.file(res, rej)));
+    else if (entry.isDirectory){
+      if (!dirName) dirName = entry.name;
+      const reader = entry.createReader();
+      for (;;){
+        const batch = await new Promise((res,rej) => reader.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const e of batch) await walk(e);
+      }
+    }
+  };
+  for (const e of entries) await walk(e);
+  return { files:out, dirName };
+}
+
+/* ---- repères de départ et d'arrivée (trace active) ----------------------- */
+const endpointInput = kind => kind==='start' ? $('#startName') : $('#endName');
+const endpointWp    = kind => waypoints.find(w => w.kind === kind);
+
+function syncEndpoint(kind, quiet){
+  if (!track) return;
+  const name = endpointInput(kind).value.trim();
+  const w = endpointWp(kind);
+  if (!name){
+    if (w) waypoints.splice(waypoints.indexOf(w), 1);
+  } else if (w){
+    w.name = name;
+  } else {
+    const d = kind==='start' ? 0 : track.total;
+    const s = stateAt(track, d);
+    waypoints.push({ name, d, lon:s.lon, lat:s.lat, kind, color:null });
+    waypoints.sort((a,b)=>a.d-b.d);
+  }
+  rememberTrackFields();
+  wpTimesDirty = true;
+  if (!quiet){ renderWpList(); if (editing) refreshMarkers(); renderPreview(); }
+}
+
+/* ---- projet (.json) ------------------------------------------------------ */
+function collectSettings(){
+  const o = {};
+  PERSIST.forEach(id=>{
+    const el = $('#'+id); o[id] = el.type==='checkbox' ? el.checked : el.value;
+  });
+  return o;
+}
+function applySettings(o){
+  Object.keys(o||{}).forEach(id=>{
+    const el = $('#'+id); if (!el) return;
+    if (el.type==='checkbox') el.checked = !!o[id]; else el.value = o[id];
+  });
+  syncLabels();
+  const bm = BASEMAPS[$('#basemap').value] ? $('#basemap').value : 'esri';
+  $('#basemap').value = bm;
+  invalidateOverview();
+  if (bm !== currentBasemap) setBasemap(bm);      // recharge le style et l'aperçu
+  else { refreshAccent(); applyTerrain(); }
+}
+function saveProject(){
+  if (!tracks.length){ toast('Chargez d’abord une trace GPX.', true); return; }
+  rememberTrackFields();
+  const data = {
+    format:'gpx-cinematic', version:2, savedAt:new Date().toISOString(),
+    name: projectBase || null,
+    settings: collectSettings(),
+    active: Math.max(0, tracks.findIndex(t => t.id === activeId)),
+    tracks: tracks.map(t => ({
+      gpx:{ filename:t.gpxName, content:t.gpxText },
+      title:t.title, subtitle:t.subtitle, dur:t.dur, startName:t.startName, endName:t.endName,
+      waypoints: t.waypoints.map(w=>({ name:w.name, d:Math.round(w.d*100)/100, kind:w.kind||null, color:w.color||null }))
+    }))
+  };
+  download(new Blob([JSON.stringify(data, null, 1)], {type:'application/json'}),
+           `${projectSlug()}.gpxcine.json`);
+  toast(`Projet enregistré ✔ (${tracks.length} trace${tracks.length>1?'s':''})`);
+}
+function openProject(data){
+  if (!data || data.format !== 'gpx-cinematic') throw new Error('Ce fichier n’est pas un projet GPX Cinematic.');
+  let list, active = 0;
+  if (Array.isArray(data.tracks) && data.tracks.length){ list = data.tracks; active = data.active|0; }
+  else if (data.gpx && data.gpx.content){              // format v1 : une seule trace
+    const st = data.settings || {};
+    list = [{ gpx:data.gpx, title:st.title, subtitle:st.subtitle, dur:st.dur,
+              startName:st.startName, endName:st.endName, waypoints:data.waypoints }];
+  } else throw new Error('Projet sans trace GPX.');
+
+  const built = list.map(it => buildEntry(it.gpx.content, it.gpx.filename, it));   // lève si un GPX est invalide
+  applySettings(data.settings || {});
+  tracks = built;
+  projectBase = data.name || null;
+  activate(tracks[clamp(active, 0, tracks.length-1)].id);
+  toast(`Projet rechargé : ${tracks.length} trace${tracks.length>1?'s':''}`);
+}
+
+function showTrackInfo(){
+  const e = activeEntry();
+  if (!e){ $('#trackInfo').textContent = 'Aucune trace chargée.'; return; }
+  const tk = e.track, d=U.dist(tk.total), el=U.elev(tk.gain);
+  const rows = [
+    `Distance <b>${fmt(d.v,2)} ${d.u}</b>`,
+    tk.hasEle ? `Dénivelé + <b>${fmt(el.v,0)} ${el.u}</b> · alt. <b>${fmt(U.elev(tk.minEle).v,0)}–${fmt(U.elev(tk.maxEle).v,0)} ${el.u}</b>` : 'Pas de données d’altitude',
+    tk.timed ? `Durée réelle <b>${mmss((tk.t1-tk.t0)/1000)}</b>` : 'Pas d’horodatage',
+    `${fmt(tk.pts.length,0)} points · ${e.g.waypoints.length} balise(s) wpt`,
+    `Fichier <b>${e.gpxName.replace(/[<>&]/g,'')}</b>`
+  ];
+  $('#trackInfo').innerHTML = rows.join('<br>');
+}
+
+/* ======================================================================== */
+/*  POINTS DE PASSAGE                                                       */
+/* ======================================================================== */
+let wpMarkers=[];
+function renderWpList(){
+  const ul=$('#wpList'); ul.innerHTML='';
+  waypoints.forEach((w,i)=>{
+    const li=document.createElement('li');
+    const name=document.createElement('input');
+    name.type='text'; name.value=w.name; name.placeholder='Nom';
+    name.oninput=()=>{
+      w.name=name.value;
+      if (w.kind){ endpointInput(w.kind).value = name.value; rememberTrackFields(); }
+      renderPreview();
+    };
+    if (w.kind){
+      const pin=document.createElement('span');
+      pin.className='pin'; pin.textContent = w.kind==='start' ? '▶' : '⏹';
+      pin.title = w.kind==='start' ? 'Départ' : 'Arrivée';
+      li.appendChild(pin);
+    }
+    const km=document.createElement('input');
+    km.type='text'; km.className='km'; km.value=fmt(U.dist(w.d).v,2);
+    km.disabled = !!w.kind;                    // départ/arrivée restent aux extrémités
+    km.onchange=()=>{
+      const v=parseFloat(km.value.replace(',','.'));
+      if (Number.isFinite(v)){
+        const meters = U.imperial ? v*1609.344 : v*1000;
+        w.d = clamp(meters, 0, track.total);
+        const s=stateAt(track,w.d); w.lon=s.lon; w.lat=s.lat;
+        waypoints.sort((a,b)=>a.d-b.d); wpTimesDirty=true;
+        renderWpList(); if (editing) refreshMarkers(); renderPreview();
+      } else km.value=fmt(U.dist(w.d).v,2);
+    };
+    const unit=document.createElement('span');
+    unit.textContent=U.dist(0).u; unit.style.cssText='color:#8b97ad;font-size:11px';
+    const del=document.createElement('button');
+    del.className='del'; del.textContent='×'; del.title='Supprimer';
+    del.onclick=()=>{
+      if (w.kind){ endpointInput(w.kind).value=''; rememberTrackFields(); }
+      waypoints.splice(i,1); wpTimesDirty=true;
+      renderWpList(); if(editing) refreshMarkers(); renderPreview();
+    };
+    // couleur du tronçon qui part de ce point (pas pour l'arrivée : rien après)
+    const tail = [];
+    if (w.kind !== 'end'){
+      const sw=document.createElement('input');
+      sw.type='color'; sw.className='wc' + (w.color ? '' : ' inh');
+      sw.value = w.color || colorAt(w.d);
+      sw.title = w.color ? 'Couleur du tronçon à partir de ce point'
+                         : 'Couleur héritée du tronçon précédent — cliquer pour en choisir une';
+      sw.oninput = ()=>{ w.color = sw.value; sw.classList.remove('inh'); lastDoneIdx=-1; if (!exporting) renderPreview(); };
+      sw.onchange = ()=>{ renderWpList(); if (editing) refreshMarkers(); };
+      tail.push(sw);
+      if (w.color){
+        const rst=document.createElement('button');
+        rst.className='rst'; rst.textContent='↺'; rst.title='Revenir à la couleur héritée';
+        rst.onclick=()=>{ w.color=null; lastDoneIdx=-1; renderWpList(); if (editing) refreshMarkers(); renderPreview(); };
+        tail.push(rst);
+      }
+    }
+    li.append(name, km, unit, ...tail, del); ul.appendChild(li);
+  });
+  if (!waypoints.length) ul.innerHTML='<li style="border:none;background:none;color:#8b97ad;font-size:11.5px;padding:2px 0">Aucun point de passage.</li>';
+}
+function addWaypoint(lon, lat, name){
+  if (!track) return;
+  const s = snapToTrack(lon, lat);
+  waypoints.push({ name: name || `Point ${waypoints.length+1}`, d:s.d, lon:s.lon, lat:s.lat });
+  waypoints.sort((a,b)=>a.d-b.d);
+  wpTimesDirty=true; renderWpList(); if (editing) refreshMarkers(); renderPreview();
+}
+function refreshMarkers(){
+  wpMarkers.forEach(m=>m.remove()); wpMarkers=[];
+  if (!editing) return;
+  waypoints.forEach(w=>{
+    const el=document.createElement('div');
+    el.style.cssText=`width:26px;height:26px;border-radius:50%;background:${colorAt(w.d)};border:4px solid #fff;
+      box-shadow:0 3px 12px #0009;cursor:grab`;
+    if (w.kind) el.style.cursor='default';
+    const m=new maplibregl.Marker({element:el, draggable:!w.kind}).setLngLat([w.lon,w.lat]).addTo(map);
+    m.on('dragend', ()=>{
+      const p=m.getLngLat(); const s=snapToTrack(p.lng,p.lat);
+      w.d=s.d; w.lon=s.lon; w.lat=s.lat;
+      waypoints.sort((a,b)=>a.d-b.d);
+      wpTimesDirty=true; renderWpList(); refreshMarkers();
+    });
+    wpMarkers.push(m);
+  });
+}
+function setEditing(on){
+  if (!track && on){ toast('Chargez d’abord une trace GPX.', true); return; }
+  editing=on;
+  $('#viewport').classList.toggle('editing', on);
+  $('#editWp').classList.toggle('on', on);
+  $('#editWp').textContent = on ? '✓ Terminer le placement' : '🖈 Placer sur la carte';
+  ['scrollZoom','dragPan','doubleClickZoom','touchZoomRotate','keyboard'].forEach(h=> map[h] && (on?map[h].enable():map[h].disable()));
+  map.getCanvas().style.cursor = on ? 'crosshair' : '';
+  if (on){
+    const ov=getOverview();
+    map.jumpTo({center:ov.center, zoom:ov.zoom, bearing:0, pitch:0, padding:{top:0,bottom:0,left:0,right:0}});
+    if (map.getSource('done')) map.getSource('done').setData(doneFC(track.total));
+    lastDoneIdx=-1;
+  } else { renderPreview(); }
+  refreshMarkers();
+}
+map.on('click', e=>{ if (editing && track) addWaypoint(e.lngLat.lng, e.lngLat.lat); });
+
+/* ======================================================================== */
+/*  EXPORT VIDÉO                                                            */
+/* ======================================================================== */
+let cancelFlag=false;
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('Chargement impossible : '+src));
+    document.head.appendChild(s);
+  });
+}
+function setExportUI(on, pct, label){
+  $('#export').disabled=on; $('#cancelExport').style.display=on?'':'none';
+  $('#expBar').style.width=(pct||0)+'%';
+  $('#expHint').textContent = label || 'Rendu image par image : chaque tuile est attendue avant capture. L’export continue si vous changez de fenêtre.';
+  $$('#panel input,#panel select').forEach(el=>el.disabled=on);
+  $('#cancelExport').disabled=false;
+  $('#play').disabled=on; $('#scrub').disabled=on; $('#prefetch').disabled=on;
+}
+function download(blob, name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 20000);
+}
+/* Le projet est nommé d'après le fichier GPX d'origine, pour qu'on retrouve la
+   correspondance ; à défaut, d'après le titre. */
+const projectSlug = () => {
+  const e = activeEntry();
+  const base = (projectBase || (tracks.length === 1 && e ? e.gpxName.replace(/\.gpx$/i,'') : '') || '').trim();
+  return base ? slugify(base) : slug();
+};
+const slugify = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'trace';
+const slug = () => ($('#title').value.trim()||'trace').normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'trace';
+
+async function exportVideo(){
+  if (!track) { toast('Chargez une trace GPX.', true); return; }
+  if (editing) setEditing(false);
+  setPlaying(false);
+  cancelFlag=false; exporting=true;
+  const fps=+$('#fps').value, bitrate=(+$('#bitrate').value)*1e6;
+  const frames=Math.round(TL.total*fps);
+
+  try {
+    if (!('VideoEncoder' in window)) { await exportRealtime(fps, bitrate, frames); return; }
+    if (!window.Mp4Muxer) await loadScript('https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js');
+
+    const candidates = fps>30
+      ? ['avc1.64002A','avc1.640028','avc1.4d002A','avc1.42002A']
+      : ['avc1.640028','avc1.4d0028','avc1.420028'];
+    let codec=null;
+    for (const c of candidates){
+      const cfg={codec:c, width:W, height:H, bitrate, framerate:fps, latencyMode:'quality', avc:{format:'avc'}};
+      try { if ((await VideoEncoder.isConfigSupported(cfg)).supported){ codec=c; break; } } catch(e){}
+    }
+    if (!codec) { toast('H.264 non supporté ici — capture WebM de repli.', true); await exportRealtime(fps,bitrate,frames); return; }
+
+    if ($('#prefetchExport').checked){
+      await prefetchTiles((p, total, got) => setExportUI(true, (0.3*p + 0.7*(total ? got/total : 0))*100,
+        `Préchargement des tuiles · ${fmt(got,0)} / ${fmt(total,0)}`));
+      if (cancelFlag){ toast('Export annulé.'); return; }
+    }
+    if ($('#showMinimap').checked && !mini){
+      setExportUI(true, 0, 'Préparation de la mini-carte…');
+      await buildMinimap();
+    }
+    setExportUI(true, 0, 'Préparation du rendu…');
+    const muxer = new Mp4Muxer.Muxer({
+      target: new Mp4Muxer.ArrayBufferTarget(),
+      video: {codec:'avc', width:W, height:H, frameRate:fps},
+      fastStart:'in-memory'
+    });
+    let encError=null;
+    const encoder = new VideoEncoder({
+      output:(chunk, meta)=>muxer.addVideoChunk(chunk, meta),
+      error: e => { encError = e; }
+    });
+    encoder.configure({codec, width:W, height:H, bitrate, framerate:fps, latencyMode:'quality', avc:{format:'avc'}});
+
+    const t0 = performance.now();
+    for (let i=0;i<frames;i++){
+      if (cancelFlag || encError) break;
+      curT = i/fps;
+      await renderFrame(curT, true);
+      const frame = new VideoFrame(view, {timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps)});
+      encoder.encode(frame, {keyFrame: i % (fps*2) === 0});
+      frame.close();
+      if (encoder.encodeQueueSize > 8){
+        await new Promise(res=>{
+          const to = setTimeout(done, 5000);
+          function done(){ clearTimeout(to); encoder.ondequeue = null; res(); }
+          encoder.ondequeue = ()=>{ if (encoder.encodeQueueSize <= 4) done(); };
+        });
+      }
+      const pct=(i+1)/frames*100, el=(performance.now()-t0)/1000;
+      const eta = el/(i+1)*(frames-i-1);
+      setExportUI(true, pct, `Image ${i+1}/${frames} · ${pct.toFixed(0)} % · ~${mmss(eta)} restant`);
+      await uiYield();
+    }
+    if (encError) throw encError;
+    if (cancelFlag){ encoder.close(); toast('Export annulé.'); return; }
+
+    setExportUI(true, 100, 'Finalisation du fichier MP4…');
+    await encoder.flush(); encoder.close(); muxer.finalize();
+    download(new Blob([muxer.target.buffer], {type:'video/mp4'}), `${slug()}-${W}x${H}.mp4`);
+    toast('MP4 exporté ✔');
+  } catch(err){
+    console.error(err); toast('Export interrompu : '+(err.message||err), true);
+  } finally {
+    exporting=false; setExportUI(false, 0); curT=0; renderPreview();
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Préchargement : on parcourt la trajectoire de la caméra à 4 images-clés par
+   seconde d'animation. À chaque vue, MapLibre calcule lui-même les tuiles
+   nécessaires (inclinaison, relief, niveaux de zoom selon la distance) : on
+   relève ces tuiles et on les télécharge en parallèle dans le magasin. La
+   lecture et l'export les y trouvent ensuite sans attendre le réseau.
+--------------------------------------------------------------------------- */
+function wantedTileUrls(){
+  const urls = [];
+  for (const sc of Object.values(map.style.sourceCaches || {})){
+    const src = sc.getSource();
+    if (!src || !src.tiles || !sc.used) continue;
+    for (const t of Object.values(sc._tiles || {}))
+      urls.push(t.tileID.canonical.url(src.tiles, map.getPixelRatio(), src.scheme));
+  }
+  return urls;
+}
+async function prefetchTiles(onProgress){
+  if (!track) return { tiles:0, failed:0 };
+  const K = 4, n = Math.ceil(TL.total*K);
+  const seen = new Set();
+  let settled = 0, failed = 0;
+  for (let i=0; i<=n && !cancelFlag; i++){
+    const f = frameAt(Math.min(TL.total, i/K));
+    applyCam(f.cam); map.redraw();
+    for (const u of wantedTileUrls()){
+      const key = u.replace(/^cache:\/\//, 'https://');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      fetchTile(key).then(() => settled++, () => { settled++; failed++; });
+    }
+    onProgress && onProgress(i/n, seen.size, settled);
+    // ne pas laisser la file enfler : la caméra attend le réseau au besoin
+    if (tileQueue.length > 250) while (tileQueue.length > 120 && !cancelFlag) await delay(40);
+    else await nextTask();
+  }
+  while (settled < seen.size && !cancelFlag){
+    onProgress && onProgress(1, seen.size, settled);
+    await delay(120);
+  }
+  return { tiles:seen.size, failed };
+}
+async function runPrefetch(){
+  if (!track || exporting) return;
+  if (editing) setEditing(false);
+  setPlaying(false);
+  cancelFlag = false; exporting = true;                 // verrouille l'aperçu pendant le parcours
+  const t0 = performance.now();
+  try {
+    const r = await prefetchTiles((p, total, got) =>
+      setExportUI(true, (0.3*p + 0.7*(total ? got/total : 0))*100, `Préchargement · ${fmt(got,0)} / ${fmt(total,0)} tuiles`));
+    if ($('#showMinimap').checked && !mini) await buildMinimap();
+    toast(cancelFlag ? 'Préchargement interrompu.'
+                     : `${fmt(r.tiles,0)} tuiles prêtes en ${Math.round((performance.now()-t0)/1000)} s`);
+  } finally {
+    exporting = false; setExportUI(false, 0); updateCacheInfo(); renderPreview(); refreshPreviewSoon();
+  }
+}
+function updateCacheInfo(){
+  const el = $('#cacheInfo'); if (!el) return;
+  el.textContent = tileStore.size
+    ? `Cache de tuiles : ${fmt(tileStore.size,0)} tuiles · ${fmt(tileBytes/1048576,0)} Mo` +
+      (tileActive || tileQueue.length ? ` · ${tileActive + tileQueue.length} en cours` : '')
+    : 'Cache de tuiles : vide';
+}
+
+/* Repli temps réel (navigateurs sans WebCodecs) */
+async function exportRealtime(fps, bitrate, frames){
+  const mimes=['video/mp4;codecs=avc1.640028','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const mime = mimes.find(m=>window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+  if (!mime){ toast('Aucun encodeur vidéo disponible dans ce navigateur.', true); return; }
+  setExportUI(true, 0, 'Capture en temps réel (ne changez pas d’onglet)…');
+  const stream = view.captureStream(fps);
+  const chunks=[];
+  const rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:bitrate});
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  const done = new Promise(r => rec.onstop = r);
+  rec.start(500);
+  const t0=performance.now();
+  await new Promise(res=>{
+    const loop=()=>{
+      const el=(performance.now()-t0)/1000;
+      curT = Math.min(TL.total, el);
+      renderPreview();
+      setExportUI(true, curT/TL.total*100, `Capture ${mmss(curT)} / ${mmss(TL.total)}`);
+      if (cancelFlag || curT>=TL.total) return res();
+      requestAnimationFrame(loop);
+    };
+    loop();
+  });
+  rec.stop(); await done;
+  if (cancelFlag){ toast('Export annulé.'); return; }
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  download(new Blob(chunks,{type:mime}), `${slug()}-${W}x${H}.${ext}`);
+  toast(ext==='mp4' ? 'MP4 exporté ✔' : 'WebM exporté (MP4 indisponible sur ce navigateur).');
+}
+</script>
+
+<script>
+/* ======================================================================== */
+/*  INTERFACE                                                               */
+/* ======================================================================== */
+function syncLabels(){
+  $('#zoomV').textContent   = (+$('#zoom').value).toFixed(1);
+  $('#pitchV').textContent  = $('#pitch').value+'°';
+  $('#anchorV').textContent = $('#anchor').value+' %';
+  $('#aheadV').textContent  = $('#ahead').value+' m';
+  $('#smoothV').textContent = $('#smooth').value+' m';
+  $('#inertiaV').textContent= (+$('#inertia').value).toFixed(1).replace('.',',')+' s';
+  $('#maxrotV').textContent = $('#maxrot').value+' °/s';
+  $('#trackWidthV').textContent = (+$('#trackWidth').value).toFixed(1).replace('.',',')+'×';
+  $('#freedomV').textContent = +$('#freedom').value ? $('#freedom').value+' %' : 'aucune';
+  $('#durV').textContent    = $('#dur').value+' s';
+  $('#exagV').textContent   = (+$('#exag').value).toFixed(1)+'×';
+}
+const PERSIST = ['title','subtitle','accent','units','showProfile','showCompass','showMinimap','trackWidth','prefetchExport','basemap','terrain','exag',
+                 'zoom','pitch','anchor','ahead','smooth','inertia','maxrot','freedom',
+                 'dur','intro','outro','pace','fps','bitrate'];
+function saveSettings(){
+  const o={}; PERSIST.forEach(id=>{ const el=$('#'+id); o[id]= el.type==='checkbox'?el.checked:el.value; });
+  try{ localStorage.setItem('gpxcine', JSON.stringify(o)); }catch(e){}
+}
+function restoreSettings(){
+  try{
+    const o=JSON.parse(localStorage.getItem('gpxcine')||'{}');
+    PERSIST.forEach(id=>{ if(o[id]===undefined) return; const el=$('#'+id);
+      if (el.type==='checkbox') el.checked=o[id]; else el.value=o[id]; });
+    $('#title').value=''; $('#subtitle').value='';   // titres propres à chaque trace
+  }catch(e){}
+  syncLabels();
+}
+
+/* ---- fichier ---- */
+$('#file').addEventListener('change', e=>{ if (e.target.files.length) loadFiles(e.target.files); e.target.value=''; });
+$('#openDir').onclick = ()=> $('#dirInput').click();
+$('#dirInput').addEventListener('change', e=>{
+  const files = [...e.target.files];
+  const dir = files[0] && files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : null;
+  if (files.length) loadFiles(files, dir);
+  e.target.value='';
+});
+$('#clearTracks').onclick = ()=>{
+  if (!tracks.length || exporting) return;
+  if (tracks.length > 1 && !confirm(`Retirer les ${tracks.length} traces de la liste ?`)) return;
+  tracks = []; projectBase = null; clearActive();
+};
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev, e=>{
+  e.preventDefault(); $('#drop').classList.add('hot');
+}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev, e=>{
+  e.preventDefault(); if (ev==='drop'||e.target===document.documentElement) $('#drop').classList.remove('hot');
+}));
+document.addEventListener('drop', e=>{
+  if (!e.dataTransfer) return;
+  const entries = entriesFromDrop(e.dataTransfer);          // à lire tout de suite
+  const plain = [...(e.dataTransfer.files || [])];
+  (async ()=>{
+    const { files, dirName } = entries.length ? await filesFromEntries(entries) : { files:plain, dirName:null };
+    if (files.some(f=>/\.(gpx|json)$/i.test(f.name))) loadFiles(files, dirName);
+    else if (files.length) toast('Déposez des fichiers .gpx, un dossier ou un projet .json', true);
+  })();
+});
+
+/* ---- réglages ---- */
+const onChange = (ids, fn) => ids.forEach(id => $('#'+id).addEventListener('input', ()=>{
+  syncLabels(); fn && fn(); saveSettings(); if (!exporting) renderPreview();
+}));
+onChange(['title','subtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
+onChange(['showProfile','showCompass','showMinimap','prefetchExport']);
+onChange(['trackWidth'], applyTrackWidth);
+onChange(['accent'], ()=>{ refreshAccent(); renderWpList(); if (editing) refreshMarkers(); });
+onChange(['pitch','anchor']);
+onChange(['zoom'], computeCameraTrackSafe);          // le rayon de liberté dépend du zoom
+onChange(['ahead','smooth','inertia','maxrot','freedom'], rebuildMotion);
+onChange(['dur','intro','outro','pace'], ()=>{ rememberTrackFields(); rebuildMotion(); curT=Math.min(curT, TL.total); });
+onChange(['units'], ()=>{ renderTrackList(); if (track){ renderWpList(); showTrackInfo(); } });
+onChange(['terrain','exag'], ()=>{ applyTerrain(); invalidateOverview(); });
+$('#basemap').addEventListener('change', ()=>{ saveSettings(); setBasemap($('#basemap').value); });
+
+/* ---- transport ---- */
+$('#play').onclick = ()=> setPlaying(!playing);
+$('#rewind').onclick = ()=>{ setPlaying(false); curT=0; renderPreview(); };
+$('#scrub').addEventListener('input', e=>{
+  setPlaying(false); curT = (+e.target.value/1000)*TL.total; renderPreview();
+});
+document.addEventListener('keydown', e=>{
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  if (e.code==='Space'){ e.preventDefault(); setPlaying(!playing); }
+  if (e.code==='ArrowLeft'){ setPlaying(false); curT=Math.max(0,curT-1); renderPreview(); }
+  if (e.code==='ArrowRight'){ setPlaying(false); curT=Math.min(TL.total,curT+1); renderPreview(); }
+});
+
+/* ---- points de passage ---- */
+$('#editWp').onclick = ()=> setEditing(!editing);
+$('#addHere').onclick = ()=>{
+  if (!track) { toast('Chargez d’abord une trace GPX.', true); return; }
+  const f = frameAt(curT);
+  const name = prompt('Nom du point de passage :', `Point ${waypoints.length+1}`);
+  if (name === null) return;
+  const s = stateAt(track, f.d);
+  addWaypoint(s.lon, s.lat, name.trim() || `Point ${waypoints.length+1}`);
+};
+
+/* ---- départ / arrivée ---- */
+$('#startName').addEventListener('input', ()=> syncEndpoint('start'));
+$('#endName').addEventListener('input',  ()=> syncEndpoint('end'));
+
+/* ---- projet ---- */
+$('#saveProject').onclick = saveProject;
+$('#openProject').onclick = ()=> $('#projectFile').click();
+$('#projectFile').addEventListener('change', e=>{
+  if (e.target.files[0]) loadFiles([e.target.files[0]]);
+  e.target.value='';
+});
+
+/* ---- export ---- */
+$('#export').onclick = exportVideo;
+$('#prefetch').onclick = runPrefetch;
+setInterval(updateCacheInfo, 1500);
+$('#cancelExport').onclick = ()=>{ cancelFlag=true; $('#cancelExport').disabled=true; };
+
+/* ---- le cadre garde exactement le 16:9, la carte suit à l'échelle ---- */
+const vp=$('#viewport'), wrap=$('#vpWrap'), scaler=$('#mapScaler');
+function layout(){
+  const r = wrap.getBoundingClientRect();
+  const w = Math.max(160, Math.min(r.width, r.height*W/H));
+  vp.style.width = w+'px';
+  vp.style.height = (w*H/W)+'px';
+  scaler.style.transform = `scale(${w/W})`;
+}
+new ResizeObserver(layout).observe(wrap);
+layout();
+
+restoreSettings();
+renderWpList();
+renderPreview();
+window.addEventListener('beforeunload', saveSettings);
+</script>
+</body>
+</html>
