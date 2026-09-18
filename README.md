@@ -33,7 +33,7 @@ Testé sur Chrome / Edge / Brave et Safari 17+ (l'export MP4 utilise WebCodecs).
 |---|---|
 | Intro | Vue globale de la trace, nord en haut, puis zoom vers le point de départ |
 | Parcours | Caméra inclinée qui suit le point courant et vise en avant, trace persistante |
-| Final | Dézoom vers la vue globale nord en haut + carte de fin : titre, **sous-titre de fin** (champ libre, propre à chaque trace, rien s'il est vide), puis distance, D+, durée |
+| Final | Dézoom vers la vue globale nord en haut + carte de fin : titre, **sous-titre de fin** (champ libre, propre à chaque trace, rien s'il est vide), puis distance, altitude max, durée (si le GPX est horodaté) |
 
 ## Plusieurs traces
 
@@ -227,6 +227,19 @@ du tronçon en cours s'applique aussi au repère de position, à la distance
 affichée, au remplissage du profil altimétrique, au triangle de cap réel de la
 rose des vents et à la mini-carte. Elle est conservée
 dans le projet `.json`.
+
+## Chiffres affichés
+
+Pendant le trajet : **distance**, **altitude**, **altitude max** atteinte
+jusque-là (et la vitesse si le GPX est horodaté). Sur la carte de fin :
+distance, **altitude max**, durée.
+
+Le **dénivelé positif** n'est plus affiché par défaut : sur un itinéraire
+planifié (gpx.studio, Komoot…), les altitudes sont tirées d'un modèle de
+terrain qui « voit » les falaises et talus au bord de la route, et le D+ est
+fortement surestimé (sur un trajet de 357 km dans les fjords de l'Ouest :
+de 3 200 à 4 800 m selon le lissage). La case **Afficher le dénivelé positif**
+(Habillage) le rétablit, pour une trace enregistrée avec un altimètre.
 
 ## Rose des vents
 

@@ -205,6 +205,7 @@ body.tab-map #transport{visibility:hidden}
       <label>Unités<select id="units"><option value="m">km / m</option><option value="i">mi / ft</option></select></label>
     </div>
     <label class="chk"><input type="checkbox" id="showProfile" checked> Profil altimétrique</label>
+    <label class="chk" style="margin-top:6px" title="Le dénivelé calculé sur un itinéraire planifié (altitudes tirées d’un modèle de terrain) est souvent surestimé : à réserver aux traces enregistrées avec un altimètre."><input type="checkbox" id="showGain"> Afficher le dénivelé positif</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showCompass" checked> Rose des vents</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showMinimap" checked> Mini-carte (nord en haut)</label>
   </section>
@@ -495,6 +496,9 @@ function buildTrack(raw){
     if (e > ref+2){ gain += e-ref; ref = e; } else if (e < ref) ref = e;
     gainAt[i]=gain;
   }
+  // altitude maximale atteinte jusqu'à chaque point
+  const maxAt = new Float64Array(S.length);
+  for (let i=0, m=-Infinity; i<S.length; i++){ m = Math.max(m, S[i].ele); maxAt[i] = m; }
 
   // 6. emprise + min/max altitude
   let minLon=180,maxLon=-180,minLat=90,maxLat=-90,minEle=1e9,maxEle=-1e9;
@@ -510,7 +514,7 @@ function buildTrack(raw){
                 times[times.length-1].t > times[0].t;
 
   const tk = {
-    pts, samples:S, step, total, gain, gainAt, hasEle,
+    pts, samples:S, step, total, gain, gainAt, maxAt, hasEle,
     timedPts: timed ? times : null,
     minEle, maxEle, timed,
     t0: timed ? times[0].t : null,
@@ -1402,8 +1406,12 @@ function statCols(f, st){
   ];
   if (track.hasEle){
     const gi = clamp(Math.round(f.d/track.step), 0, track.gainAt.length-1);
-    const gain = U.elev(track.gainAt[gi]);
-    cols.push({label:'DÉNIVELÉ +', value:fmt(gain.v,0), unit:gain.u});
+    const mx = U.elev(Math.max(track.maxAt[gi], st.ele));
+    cols.push({label:'ALT. MAX', value:fmt(mx.v,0), unit:mx.u});
+    if ($('#showGain').checked){
+      const gain = U.elev(track.gainAt[gi]);
+      cols.push({label:'DÉNIVELÉ +', value:fmt(gain.v,0), unit:gain.u});
+    }
   }
   const sp = speedAt(track, f.d);
   if (sp !== null && f.phase==='travel'){
@@ -2038,9 +2046,10 @@ function drawEndCard(f, acc){
   if (title){ shadow(24,0.7,3); ctx.fillStyle='#fff'; ctx.font=FONT(700,64); ctx.fillText(title, W/2, y - (sub ? 96 : 76)); noShadow(); }
   if (sub){ shadow(14,0.7,2); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=FONT(500,28); ctx.fillText(sub, W/2, y-52); noShadow(); }
 
-  const d=U.dist(track.total), e=U.elev(track.gain);
+  const d=U.dist(track.total), e=U.elev(track.gain), mx=U.elev(track.maxEle);
   const items=[{v:fmt(d.v,1),u:d.u,l:'DISTANCE'}];
-  if (track.hasEle) items.push({v:fmt(e.v,0),u:e.u,l:'DÉNIVELÉ +'});
+  if (track.hasEle) items.push({v:fmt(mx.v,0),u:mx.u,l:'ALT. MAX'});
+  if (track.hasEle && $('#showGain').checked) items.push({v:fmt(e.v,0),u:e.u,l:'DÉNIVELÉ +'});
   if (track.timed){
     const h=(track.t1-track.t0)/3600000;
     items.push({v:`${Math.floor(h)}h${String(Math.round((h%1)*60)).padStart(2,'0')}`,u:'',l:'DURÉE'});
@@ -2143,12 +2152,14 @@ function snapToTrack(lon, lat, tk=track){
 let tracks = [], activeId = null, nextTrackId = 1, projectBase = null;
 const activeEntry = () => tracks.find(t => t.id === activeId) || null;
 
-function defaultSubtitle(tk){
+function defaultSubtitle(tk, withGain){
   const d0 = tk.timed ? new Date(tk.t0) : null, dd = U.dist(tk.total);
   return [d0 ? d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : null,
           `${fmt(dd.v,1)} ${dd.u}`,
-          tk.hasEle ? `${fmt(tk.gain,0)} m D+` : null].filter(Boolean).join(' · ');
+          withGain && tk.hasEle ? `${fmt(tk.gain,0)} m D+` : null].filter(Boolean).join(' · ');
 }
+/* Sous-titre resté à une valeur par défaut (ancienne, avec D+, ou actuelle) ? */
+const isDefaultSubtitle = (sub, tk) => sub === defaultSubtitle(tk) || sub === defaultSubtitle(tk, true);
 const defaultDur = tk => clamp(Math.round(tk.total/1000*4), 20, 120);   // ~4 s par km
 const cleanColor = c => /^#[0-9a-f]{6}$/i.test(c||'') ? c : null;
 
@@ -2167,7 +2178,7 @@ function buildEntry(text, filename, saved){
     e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
     e.mediaFolder = saved.mediaFolder || '';
     e.title     = saved.title ?? (g.name || '');
-    e.subtitle  = saved.subtitle ?? defaultSubtitle(tk);
+    e.subtitle  = saved.subtitle == null || isDefaultSubtitle(saved.subtitle, tk) ? defaultSubtitle(tk) : saved.subtitle;
     e.endSubtitle = saved.endSubtitle ?? '';
     e.dur       = +saved.dur || defaultDur(tk);
     e.startName = saved.startName ?? 'Départ';
@@ -2460,7 +2471,8 @@ function showTrackInfo(){
   const tk = e.track, d=U.dist(tk.total), el=U.elev(tk.gain);
   const rows = [
     `Distance <b>${fmt(d.v,2)} ${d.u}</b>`,
-    tk.hasEle ? `Dénivelé + <b>${fmt(el.v,0)} ${el.u}</b> · alt. <b>${fmt(U.elev(tk.minEle).v,0)}–${fmt(U.elev(tk.maxEle).v,0)} ${el.u}</b>` : 'Pas de données d’altitude',
+    tk.hasEle ? `Altitude <b>${fmt(U.elev(tk.minEle).v,0)}–${fmt(U.elev(tk.maxEle).v,0)} ${el.u}</b>` +
+                ($('#showGain').checked ? ` · D+ <b>${fmt(el.v,0)} ${el.u}</b>` : '') : 'Pas de données d’altitude',
     tk.timed ? `Durée réelle <b>${mmss((tk.t1-tk.t0)/1000)}</b>` : 'Pas d’horodatage',
     `${fmt(tk.pts.length,0)} points · ${e.g.waypoints.length} balise(s) wpt`,
     `Fichier <b>${e.gpxName.replace(/[<>&]/g,'')}</b>`
@@ -2971,7 +2983,7 @@ function updateProjectInfo(){
    durée recalculés seulement s'ils étaient restés à leur valeur par défaut. */
 function refreshTrackFromGpx(e, text){
   const g = parseGPX(text), tk = buildTrack(g.points), old = e.track;
-  const defSub = defaultSubtitle(old), defDur = defaultDur(old);
+  const wasDefaultSub = isDefaultSubtitle(e.subtitle, old), defDur = defaultDur(old);
   e.gpxText = text; e.g = g; e.track = tk; e.key = null;
   for (const w of e.waypoints){
     if (w.kind === 'start' || w.kind === 'end'){
@@ -2984,7 +2996,7 @@ function refreshTrackFromGpx(e, text){
     }
   }
   e.waypoints.sort((a, b) => a.d - b.d);
-  if (e.subtitle === defSub) e.subtitle = defaultSubtitle(tk);
+  if (wasDefaultSub) e.subtitle = defaultSubtitle(tk);
   if (+e.dur === defDur) e.dur = defaultDur(tk);
 }
 /* GPX présents dans le dossier du projet : ils font foi sur la copie embarquée. */
@@ -3787,7 +3799,7 @@ function syncLabels(){
   $('#durV').textContent    = $('#dur').value+' s';
   $('#exagV').textContent   = (+$('#exag').value).toFixed(1)+'×';
 }
-const PERSIST = ['title','subtitle','accent','units','showProfile','showCompass','showMinimap','trackWidth','prefetchExport',
+const PERSIST = ['title','subtitle','accent','units','showProfile','showGain','showCompass','showMinimap','trackWidth','prefetchExport',
                  'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','clipMax','basemap','terrain','exag',
                  'zoom','pitch','anchor','ahead','smooth','inertia','maxrot','freedom',
                  'dur','intro','outro','pace','fps','bitrate'];
@@ -3843,6 +3855,7 @@ const onChange = (ids, fn) => ids.forEach(id => $('#'+id).addEventListener('inpu
 }));
 onChange(['title','subtitle','endSubtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
 onChange(['showProfile','showCompass','showMinimap','prefetchExport']);
+onChange(['showGain'], () => { if (track) showTrackInfo(); });
 onChange(['trackWidth'], applyTrackWidth);
 onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','clipMax'], refreshPhotos);
 onChange(['photoClock']);
