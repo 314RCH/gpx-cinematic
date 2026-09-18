@@ -79,9 +79,35 @@ le bloc `eXIf` des PNG (captures et exports d'iPhone, par exemple).
   l'**écart max.** (200 m par défaut) ; sinon elle est marquée « hors trace ».
   La case **vidéo** de chaque vignette choisit les photos à montrer.
 
-Dans la vidéo, chaque photo retenue apparaît **en haut à droite** dans un
-encadré façon tirage (légende : date de prise de vue et kilométrage), avec une
-sphère sur la carte à son emplacement et un point sur la mini-carte.
+### Placement par l'heure (à valider)
+
+**🕒 Proposer les positions par l'heure** calcule une position pour les photos
+sans GPS, sans rien appliquer : elles apparaissent en pointillés, et chaque
+proposition se valide (✓) ou se rejette (✗), ou toutes d'un coup.
+
+1. Si une trace chargée est **horodatée** et couvre l'heure de la photo, la
+   position vient du GPX. L'heure EXIF n'a pas de fuseau : elle est ramenée
+   en UTC par le fuseau EXIF s'il existe, sinon par un décalage calé
+   automatiquement sur les photos qui ont une heure GPS, sinon par le champ
+   **Horloge − UTC (h)**.
+2. Sinon, la position est **interpolée entre les photos géolocalisées** de la
+   trace active, au prorata du temps (même horloge, aucun décalage à
+   connaître). Avant la première ou après la dernière photo géolocalisée,
+   elle est extrapolée à la vitesse moyenne et signalée « à vérifier ».
+
+### Présentation dans la vidéo
+
+- **Mise en avant** (par défaut) : la photo s'envole de sa sphère sur la carte
+  jusqu'au grand format centré ; la carte se floute et s'assombrit derrière,
+  les indicateurs s'effacent ; la photo zoome lentement (Ken Burns), avec sa
+  date et son kilométrage incrustés. Le point s'arrête presque le temps de la
+  photo. Les photos d'un même groupe s'enchaînent en fondu (« 2 / 4 »), puis
+  la dernière retourne à sa sphère.
+- **Encadré discret** : la photo en haut à droite, façon tirage, pendant que
+  le point ralentit.
+
+Dans les deux cas, chaque photo retenue a une sphère sur la carte à son
+emplacement et un point sur la mini-carte.
 
 **Ralentissement** : les photos proches (moins de max(150 m, 2 % de la trace)
 entre deux photos) forment un groupe. Chaque groupe de n photos ajoute

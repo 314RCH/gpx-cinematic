@@ -138,6 +138,11 @@ body.tab-map #transport{visibility:hidden}
 .photo-marker{width:18px;height:18px;border-radius:50%;cursor:pointer;background:radial-gradient(circle at 35% 30%,#fff 0 12%,#7fd3ff 30%,#1f6fb8 70%,#0b3a66);box-shadow:0 2px 6px #000b;border:1.5px solid #ffffffcc}
 .photo-marker.man{background:radial-gradient(circle at 35% 30%,#fff 0 12%,#ffd27f 30%,#c07b12 70%,#6a3f05)}
 .photo-marker.out{filter:grayscale(1);opacity:.7}
+.photo-marker.prop{background:rgba(127,211,255,.35);border:2px dashed #fff;box-shadow:0 0 0 3px #7fd3ff66}
+.ic.prop{background:rgba(127,211,255,.3);border:1.5px dashed #bfe8ff}
+.ph .pin.ok{color:#4ade80}.ph .pin.ko{color:#f87171}
+.propbar{flex:0 0 auto;background:#16324a;border:1px solid #2f6b9a;border-radius:9px;padding:8px;font-size:11.5px;color:#cfe6ff}
+.propbar .row{margin-top:6px;gap:6px}.propbar button{padding:5px 6px;font-size:11.5px}
 .photo-pop img{display:block;max-width:220px;max-height:160px;border-radius:6px}
 .photo-pop div{font:12px system-ui;color:#222;margin-top:4px}
 #toast{
@@ -266,6 +271,14 @@ body.tab-map #transport{visibility:hidden}
       <label>Durée / photo (s)<input type="number" id="photoDur" value="3.5" min="1" max="15" step="0.5"></label>
       <label>Écart max. (m)<input type="number" id="photoMaxDist" value="200" min="20" max="5000" step="10"></label>
     </div>
+    <div class="row">
+      <label>Présentation<select id="photoStyle">
+        <option value="feature">Mise en avant</option>
+        <option value="frame">Encadré discret</option>
+      </select></label>
+      <label title="Écart entre l’horloge de l’appareil et l’UTC, pour caler les photos sur l’heure du GPX. Vide : automatique.">Horloge − UTC (h)<input type="text" id="photoClock" placeholder="auto"></label>
+    </div>
+    <button id="photoByTime" style="width:100%;margin:2px 0 10px">🕒 Proposer les positions par l’heure</button>
     <label class="chk"><input type="checkbox" id="photoSlow" checked> Ralentir le point aux photos</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showPhotos" checked> Photos dans la vidéo</label>
   </section>
@@ -851,10 +864,14 @@ function rebuildWarp(){
     if (c && l.d - c.dmax <= gap){ c.items.push(l); c.dmax = l.d; }
     else clusters.push({ items:[l], dmin:l.d, dmax:l.d });
   }
+  // « Mise en avant » : zone étroite et tout le temps d'affichage ajouté, le
+  // point s'arrête presque. « Encadré » : zone large, simple ralentissement.
+  const feature = $('#photoStyle').value !== 'frame';
   for (const c of clusters){
     c.dc = (c.dmin + c.dmax)/2;
-    c.w = clamp((c.dmax - c.dmin)/2 + 250, 150, Math.max(150, track.total/2));
-    c.extra = slow ? c.items.length * dur * 0.85 : 0;
+    c.w = feature ? clamp((c.dmax - c.dmin)/2 + 60, 40, Math.max(40, track.total/2))
+                  : clamp((c.dmax - c.dmin)/2 + 250, 150, Math.max(150, track.total/2));
+    c.extra = !slow ? 0 : feature ? c.items.length * dur + 0.8 : c.items.length * dur * 0.85;
   }
   const M = 3000, tB = TL.travelBase, T = new Float64Array(M+1), D = new Float64Array(M+1);
   for (let j=0; j<=M; j++){
@@ -875,7 +892,7 @@ function rebuildWarp(){
   for (const c of clusters){
     const n = c.items.length;
     let start = Math.max(cursor, timeAtD(c.dc) - n*dur/2);
-    c.items.forEach((l, i) => photoPlan.push({ photo:l.photo, d:l.d, t0:start + i*dur, t1:start + (i+1)*dur }));
+    c.items.forEach((l, i) => photoPlan.push({ photo:l.photo, d:l.d, t0:start + i*dur, t1:start + (i+1)*dur, idx:i, count:n }));
     cursor = start + n*dur;
   }
 }
@@ -1194,9 +1211,18 @@ function uiYield(){
   // document.hidden bascule : on ne laisse jamais l'export attendre plus de 60 ms.
   return Promise.race([ new Promise(r => requestAnimationFrame(()=>r())), delay(60) ]);
 }
+const HAS_FILTER = 'filter' in CanvasRenderingContext2D.prototype;
 function composite(f){
   ctx.fillStyle='#05070a'; ctx.fillRect(0,0,W,H);
   ctx.drawImage(map.getCanvas(), 0, 0, W, H);
+  f.photoF = track ? photoFocus(f) : 0;
+  if (f.photoF > 0.01 && HAS_FILTER){           // la carte se floute derrière la photo
+    ctx.save();
+    ctx.filter = `blur(${(9*f.photoF).toFixed(1)}px)`;
+    ctx.globalAlpha = Math.min(1, f.photoF*1.3);
+    ctx.drawImage(map.getCanvas(), 0, 0, W, H);
+    ctx.restore();
+  }
   drawHUD(f);
 }
 async function renderFrame(t, wait){
@@ -1275,8 +1301,12 @@ function drawHUD(f){
   drawMinimap(f);
   if (f.titleA > 0.01) drawTitle(f.titleA);
   if (f.hud > 0.01 && f.endA < 0.9) drawStats(f, st, cur);
-  drawPhotos(f);
+  drawPhotoSpheres(f);
   drawBanner(f, acc);
+  if (f.photoF > 0.01){                  // voile : tout s'efface derrière la photo
+    ctx.fillStyle = `rgba(4,6,10,${(0.55*f.photoF).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+  }
+  drawPhotoCards(f);
   if (f.endA > 0.01) drawEndCard(f, acc);
 
   /* --- barre de progression + crédits --- */
@@ -1762,13 +1792,25 @@ function drawPhotoSphere(x, y, r, hot){
   shadow(8, 0.6, 2); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); noShadow();
   ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5; ctx.stroke();
 }
-/* Les photos retenues : une sphère sur la carte, et la photo en cours dans un
-   encadré façon tirage, en haut à droite, avec fondu enchaîné. */
-function drawPhotos(f){
-  if (!photoPlan.length || f.phase === 'intro' || !$('#showPhotos').checked) return;
+const photosActive = f => photoPlan.length && f.phase !== 'intro' && $('#showPhotos').checked;
+const featureStyle = () => $('#photoStyle').value !== 'frame';
+const FEATURE_FADE = 0.55;
+/* Degré de mise en avant (0 à 1) : pilote le flou et le voile de la carte. */
+function photoFocus(f){
+  if (!photosActive(f) || !featureStyle()) return 0;
+  const tt = f.t - TL.intro, F = FEATURE_FADE;
+  let m = 0;
+  for (const e of photoPlan){
+    if (tt < e.t0 - F || tt > e.t1 + F) continue;
+    m = Math.max(m, easeInOut(clamp((tt - (e.t0 - F))/(2*F), 0, 1)) * easeInOut(clamp(((e.t1 + F) - tt)/(2*F), 0, 1)));
+  }
+  return m * (1 - f.endA);
+}
+/* Sphère sur la carte pour chaque photo retenue. */
+function drawPhotoSpheres(f){
+  if (!photosActive(f)) return;
   const tt = f.t - TL.intro, fade = 0.4, fadeOut = 1 - f.endA;
   const shown = photoPlan.filter(e => tt > e.t0 - fade && tt < e.t1 + fade);
-
   for (const e of photoPlan){
     const p = map.project([e.photo.lon, e.photo.lat]);
     if (!isFinite(p.x) || p.x < -60 || p.x > W+60 || p.y < -60 || p.y > H+60) continue;
@@ -1777,7 +1819,13 @@ function drawPhotos(f){
     drawPhotoSphere(p.x, p.y, hot ? 12 : 8, hot);
   }
   ctx.globalAlpha = 1;
-
+}
+/* La photo elle-même : en grand au premier plan, ou en encadré discret. */
+function drawPhotoCards(f){
+  if (!photosActive(f)) return;
+  if (featureStyle()) return drawPhotoFeature(f);
+  const tt = f.t - TL.intro, fade = 0.4, fadeOut = 1 - f.endA;
+  const shown = photoPlan.filter(e => tt > e.t0 - fade && tt < e.t1 + fade);
   for (const e of shown){
     const a = clamp((tt - (e.t0 - fade))/(2*fade), 0, 1) * clamp(((e.t1 + fade) - tt)/(2*fade), 0, 1) * fadeOut;
     if (a < 0.01) continue;
@@ -1807,6 +1855,80 @@ function drawPhotos(f){
     ctx.fillStyle = '#7a7a7a'; ctx.font = FONT(500, 17); ctx.textAlign = 'right';
     const dd = U.dist(e.d); ctx.fillText(`km ${fmt(dd.v,1)}`, fw - pad - 2, ih + pad + 27);
     ctx.restore();
+  }
+  ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+
+/* « Mise en avant » : la photo s'envole de sa sphère sur la carte jusqu'au grand
+   format centré, zoome très lentement (Ken Burns), puis y retourne. Les photos
+   d'un même groupe s'enchaînent en fondu, sans repasser par la carte. */
+function photoCaption(e){
+  const dt = e.photo.date;
+  return e.photo.caption || (dt ? dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) + ' · ' +
+                                  dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+                               : e.photo.name.replace(/\.[^.]+$/, ''));
+}
+function drawPhotoFeature(f){
+  const tt = f.t - TL.intro, F = FEATURE_FADE, fadeOut = 1 - f.endA;
+  for (let i=0; i<photoPlan.length; i++){
+    const e = photoPlan[i];
+    if (tt < e.t0 - F || tt > e.t1 + F) continue;
+    const bmp = e.photo.bmp;
+    if (!bmp){ photoBitmap(e.photo); continue; }
+    const prev = photoPlan[i-1], next = photoPlan[i+1];
+    const chainIn  = prev && Math.abs(prev.t1 - e.t0) < 0.05;
+    const chainOut = next && Math.abs(next.t0 - e.t1) < 0.05;
+    const kin  = easeInOut(clamp((tt - (e.t0 - F))/(2*F), 0, 1));
+    const kout = easeInOut(clamp(((e.t1 + F) - tt)/(2*F), 0, 1));
+    // g : 0 = posée sur sa sphère, 1 = en grand ; a : opacité
+    let g = 1, a = 1;
+    if (chainIn) a = Math.min(a, kin);  else { g = Math.min(g, kin);  a = Math.min(a, clamp(kin*2.5, 0, 1)); }
+    if (chainOut) a = Math.min(a, kout); else { g = Math.min(g, kout); a = Math.min(a, clamp(kout*2.5, 0, 1)); }
+    a *= fadeOut;
+    if (a < 0.01) continue;
+
+    const k = Math.min(1500/bmp.width, 860/bmp.height);
+    const iw = bmp.width*k, ih = bmp.height*k;
+    const cx = W/2, cy = H/2 - 10;
+    const q = map.project([e.photo.lon, e.photo.lat]);
+    const sx = isFinite(q.x) ? clamp(q.x, 0, W) : cx, sy = isFinite(q.y) ? clamp(q.y, 0, H) : cy;
+    const s = lerp(0.05, 1, g), x = lerp(sx, cx, g), y = lerp(sy, cy, g);
+
+    // Ken Burns : zoom lent, léger glissement alterné d'une photo à l'autre
+    const prog = clamp((tt - (e.t0 - F)) / ((e.t1 - e.t0) + 2*F), 0, 1);
+    const z = 1 + 0.08*prog, dir = i % 2 ? 1 : -1;
+    const sw = bmp.width/z, sh = bmp.height/z;
+    const srcX = (bmp.width - sw) * (0.5 + 0.4*dir*(prog - 0.5)), srcY = (bmp.height - sh) * (0.5 - 0.2*(prog - 0.5));
+
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(x, y); ctx.scale(s, s);
+    shadow(70, 0.75, 22);
+    ctx.fillStyle = '#000'; rrect(-iw/2, -ih/2, iw, ih, 16); ctx.fill();
+    noShadow();
+    ctx.save(); rrect(-iw/2, -ih/2, iw, ih, 16); ctx.clip();
+    ctx.drawImage(bmp, srcX, srcY, sw, sh, -iw/2, -ih/2, iw, ih);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5/s; rrect(-iw/2, -ih/2, iw, ih, 16); ctx.stroke();
+    ctx.restore();
+
+    // légende incrustée en bas de la photo, sur un dégradé, une fois la photo en place
+    const la = a * clamp((g - 0.75)/0.25, 0, 1);
+    if (la > 0.01){
+      const bx = cx - iw/2, by = cy + ih/2, gh = Math.min(150, ih*0.3);
+      ctx.save(); ctx.globalAlpha = la;
+      rrect(bx, by - gh, iw, gh, 16); ctx.clip();
+      const gr = ctx.createLinearGradient(0, by - gh, 0, by);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.72)');
+      ctx.fillStyle = gr; ctx.fillRect(bx, by - gh, iw, gh);
+      shadow(10, 0.8, 1);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = FONT(600, 30);
+      ctx.fillText(photoCaption(e), bx + 30, by - 28);
+      const dd = U.dist(e.d);
+      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = FONT(500, 22);
+      ctx.fillText(`km ${fmt(dd.v,1)}` + (e.count > 1 ? `  ·  ${e.idx+1} / ${e.count}` : ''), bx + iw - 30, by - 30);
+      noShadow(); ctx.restore();
+    }
   }
   ctx.textAlign = 'left'; ctx.globalAlpha = 1;
 }
@@ -2441,6 +2563,7 @@ async function loadPhotos(files){
     const key = photoKey(f);
     if (photos.some(p => p.key === key)) continue;
     const p = { key, file:f, name:f.name, lat:null, lon:null, exifGeo:false, exifLat:null, exifLon:null, manual:false, date:null,
+                wall:null, tzMin:null, gpsUtc:null, proposal:null,
                 include:null, thumb:null, bmp:null, bad:false, caption:null };
     if (window.exifr){
       try {
@@ -2449,7 +2572,15 @@ async function loadPhotos(files){
           p.lat = p.exifLat = x.latitude; p.lon = p.exifLon = x.longitude; p.exifGeo = true;
         }
         const dt = x && (x.DateTimeOriginal || x.CreateDate);
-        if (dt instanceof Date) p.date = dt;
+        if (dt instanceof Date){
+          p.date = dt;
+          // heure « murale » de l'appareil, sans fuseau (l'EXIF n'en donne pas)
+          p.wall = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds());
+        }
+        const off = x && (x.OffsetTimeOriginal || x.OffsetTime);
+        if (typeof off === 'string' && /^[+-]\d\d:\d\d$/.test(off))
+          p.tzMin = (off[0] === '-' ? -1 : 1) * (+off.slice(1,3)*60 + +off.slice(4,6));
+        p.gpsUtc = gpsUtcOf(x);
       } catch(e){ unreadable++; console.warn('EXIF illisible', f.name, e.message); }
     }
     applyPhotoMeta(p, memo[key]);
@@ -2464,6 +2595,107 @@ async function loadPhotos(files){
                 (both ? ` · ${both} placée(s) à la main alors qu’elles ont un GPS` : '')
               : 'Ces photos sont déjà chargées.', unreadable > 0);
 }
+/* ---------------------------------------------------------------------------
+   Placement par l'heure (propositions à valider).
+   1. Si une trace chargée est horodatée et couvre l'heure de la photo, la
+      position vient du GPX. L'heure EXIF n'ayant pas de fuseau, on la ramène
+      en UTC : fuseau EXIF s'il existe, sinon décalage calé sur les photos
+      qui ont une heure GPS (UTC), sinon décalage saisi à la main.
+   2. Sinon, interpolation entre les photos géolocalisées de la trace active
+      (même horloge, donc aucun décalage à connaître), au prorata du temps.
+      Avant la première ou après la dernière photo repère : extrapolation à la
+      vitesse moyenne, signalée comme telle.
+   Rien n'est appliqué sans validation.
+--------------------------------------------------------------------------- */
+function gpsUtcOf(x){
+  if (!x || !x.GPSDateStamp || x.GPSTimeStamp == null) return null;
+  const dm = String(x.GPSDateStamp).match(/(\d{4})\D(\d\d)\D(\d\d)/);
+  if (!dm) return null;
+  const ts = Array.isArray(x.GPSTimeStamp) ? x.GPSTimeStamp : String(x.GPSTimeStamp).split(':').map(Number);
+  if (ts.length < 3 || ts.some(v => !Number.isFinite(+v))) return null;
+  return Date.UTC(+dm[1], +dm[2]-1, +dm[3], +ts[0], +ts[1], Math.floor(+ts[2]));
+}
+const fmtOffset = ms => { const h = ms/3600e3; return (h >= 0 ? '+' : '−') + fmt(Math.abs(h), Number.isInteger(h) ? 0 : 2) + ' h'; };
+function cameraOffset(){
+  const v = $('#photoClock').value.trim().replace(',', '.');
+  if (v !== '' && Number.isFinite(+v)) return { ms:+v*3600e3, how:'saisi' };
+  const diffs = photos.filter(p => p.wall != null && p.gpsUtc != null).map(p => p.wall - p.gpsUtc).sort((a,b) => a-b);
+  if (!diffs.length) return null;
+  return { ms: Math.round(diffs[diffs.length >> 1] / 900e3) * 900e3, how:`calé sur ${diffs.length} photo(s) GPS` };
+}
+const photoPos = p => p.lat != null ? { lat:p.lat, lon:p.lon } : p.proposal ? { lat:p.proposal.lat, lon:p.proposal.lon } : null;
+
+function proposePhotoPositions(){
+  const cands = photos.filter(p => p.lat == null && !p.bad);
+  if (!cands.length){ toast('Toutes les photos ont déjà une position.'); return; }
+  const off = cameraOffset();
+  const anchors = !track ? [] : photos
+    .filter(p => p.lat != null && p.wall != null && photoLink(p) && photoLink(p).near)
+    .map(p => ({ t:p.wall, d:photoLink(p).d })).sort((a,b) => a.t - b.t);
+  let byGpx = 0, byPhotos = 0, extrap = 0, noDate = 0, none = 0;
+  for (const p of cands){
+    p.proposal = null;
+    if (p.wall == null){ noDate++; continue; }
+    // 1. une trace horodatée couvre l'heure de la photo
+    const utc = p.tzMin != null ? p.wall - p.tzMin*60e3 : off ? p.wall - off.ms : null;
+    if (utc != null){
+      const order = [activeEntry(), ...tracks.filter(t => t.id !== activeId)].filter(Boolean);
+      const hit = order.find(t => t.track.timed && utc >= t.track.t0 - 300e3 && utc <= t.track.t1 + 300e3);
+      if (hit){
+        const s = stateAt(hit.track, distAtTime(hit.track, clamp(utc, hit.track.t0, hit.track.t1)));
+        p.proposal = { lat:s.lat, lon:s.lon, method:'gpx',
+          detail:`d’après l’heure du GPX « ${hit.title || hit.gpxName} »` +
+                 (p.tzMin != null ? ' (fuseau EXIF)' : ` (décalage ${fmtOffset(off.ms)}, ${off.how})`) };
+        byGpx++; continue;
+      }
+    }
+    // 2. entre les photos repères de la trace active
+    if (anchors.length >= 2){
+      const t = p.wall, i = anchors.findIndex(a => a.t >= t);
+      let d, detail, method = 'photos';
+      if (i > 0){
+        const a = anchors[i-1], b = anchors[i];
+        d = lerp(a.d, b.d, (t - a.t) / ((b.t - a.t) || 1));
+        detail = 'interpolée entre deux photos géolocalisées';
+      } else {
+        const A = anchors[0], B = anchors[anchors.length-1], v = (B.d - A.d) / ((B.t - A.t) || 1);
+        const ref = i === 0 ? A : B;
+        d = clamp(ref.d + v*(t - ref.t), 0, track.total);
+        method = 'extrapolated';
+        detail = i === 0 ? 'extrapolée : prise avant la première photo géolocalisée'
+                         : 'extrapolée : prise après la dernière photo géolocalisée';
+      }
+      const s = stateAt(track, d);
+      p.proposal = { lat:s.lat, lon:s.lon, method, detail };
+      method === 'extrapolated' ? extrap++ : byPhotos++;
+      continue;
+    }
+    none++;
+  }
+  const n = byGpx + byPhotos + extrap;
+  refreshPhotoMarkers(); renderPhotoStrip();
+  const parts = [];
+  if (byGpx) parts.push(`${byGpx} par l’heure du GPX`);
+  if (byPhotos) parts.push(`${byPhotos} entre photos géolocalisées`);
+  if (extrap) parts.push(`${extrap} extrapolée(s), à vérifier`);
+  if (noDate) parts.push(`${noDate} sans date`);
+  if (none) parts.push(`${none} sans repère (trace non horodatée et moins de 2 photos géolocalisées)`);
+  toast(n ? `${n} position(s) proposée(s) — ${parts.join(', ')}. Validez-les dans l’onglet Carte & photos.`
+          : `Aucune proposition possible — ${parts.join(', ')}.`, !n);
+  if (n && tab !== 'map') setTab('map');
+}
+function acceptProposals(list){
+  list = list.filter(p => p.proposal);
+  for (const p of list){ p.lat = p.proposal.lat; p.lon = p.proposal.lon; p.manual = true; p.proposal = null; }
+  writePhotoMemo(list);
+  refreshPhotos();
+  toast(`${list.length} position(s) validée(s)`);
+}
+function rejectProposals(list){
+  list.forEach(p => { p.proposal = null; });
+  renderPhotoStrip(); refreshPhotoMarkers();
+}
+
 /* Revenir à la position GPS d'une photo qui avait été placée à la main. */
 function useGps(list){
   list = list.filter(p => p.exifGeo);
@@ -2527,7 +2759,7 @@ async function makeThumbs(){
     }
   } finally { thumbsRunning = false; }
 }
-/* Image destinée à l'encadré vidéo : décodée une fois, 1000 px de large au plus. */
+/* Image destinée à la vidéo : décodée une fois, 1600 px au plus sur le grand côté. */
 const bmpPending = new Map();
 function photoBitmap(p){
   if (p.bmp) return Promise.resolve(p.bmp);
@@ -2535,8 +2767,9 @@ function photoBitmap(p){
   const job = (async () => {
     try {
       const full = await createImageBitmap(p.file);
-      if (full.width > 1000){
-        p.bmp = await createImageBitmap(full, { resizeWidth:1000, resizeHeight:Math.round(full.height*1000/full.width), resizeQuality:'high' });
+      const k = 1600 / Math.max(full.width, full.height);
+      if (k < 1){
+        p.bmp = await createImageBitmap(full, { resizeWidth:Math.round(full.width*k), resizeHeight:Math.round(full.height*k), resizeQuality:'high' });
         full.close();
       } else p.bmp = full;
       if (!exporting && !playing) refreshPreviewSoon();
@@ -2562,32 +2795,48 @@ function renderPhotoStrip(){
   const rank = p => { const l = photoLink(p); return !l ? 2e9 : l.near ? l.d : 1e9 + l.off; };
   const sorted = [...photos].sort((a,b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   list.innerHTML = '';
+  const props = photos.filter(p => p.proposal);
+  if (props.length){
+    const bar = document.createElement('div'); bar.className = 'propbar';
+    bar.innerHTML = `<div>${props.length} position(s) proposée(s) par l’heure</div>
+      <div class="row"><button class="ok">✓ Tout valider</button><button class="ko">✗ Tout rejeter</button></div>`;
+    bar.querySelector('.ok').onclick = () => acceptProposals(props);
+    bar.querySelector('.ko').onclick = () => rejectProposals(props);
+    list.appendChild(bar);
+  }
   for (const p of sorted){
     const l = photoLink(p);
     const el = document.createElement('div');
     el.className = 'ph' + (clickMode && clickMode.photo === p ? ' sel' : '') + (l && l.near ? '' : ' out');
     el.dataset.key = p.key;
-    const icon = p.lat == null ? '<span class="ic unk" title="Sans géolocalisation : cliquez pour la placer">?</span>'
+    const icon = p.proposal ? '<span class="ic prop" title="Position proposée par l’heure, à valider"></span>'
+               : p.lat == null ? '<span class="ic unk" title="Sans géolocalisation : cliquez pour la placer">?</span>'
                : `<span class="ic ${p.manual ? 'man' : 'geo'}" title="${p.manual ? 'Position placée à la main' : 'Position GPS de la photo'}"></span>`;
     el.innerHTML = `<div class="th">${p.thumb ? `<img alt="">` : '<img alt="" style="opacity:0">'}${icon}</div>
       <div class="meta"><span class="nm"></span>
         <label><input type="checkbox"> vidéo</label>
-        <span class="km"></span>${p.manual && p.exifGeo ? '<button class="pin gps" title="Revenir à la position GPS de la photo">⌖</button>' : ''}<button class="pin" title="Placer / déplacer sur la carte">📍</button></div>`;
+        <span class="km"></span>${p.proposal ? '<button class="pin ok" title="Valider la position proposée">✓</button><button class="pin ko" title="Rejeter la proposition">✗</button>' : ''}${p.manual && p.exifGeo ? '<button class="pin gps" title="Revenir à la position GPS de la photo">⌖</button>' : ''}<button class="pin" title="Placer / déplacer sur la carte">📍</button></div>`;
     if (p.thumb) el.querySelector('img').src = p.thumb;
     el.querySelector('.nm').textContent = p.name;
     el.querySelector('.nm').title = p.name + (p.date ? ' · ' + p.date.toLocaleString('fr-FR') : '');
-    el.querySelector('.km').textContent = p.bad ? 'illisible' : p.lat == null ? 'à placer'
+    const pl = p.proposal && track ? snapToTrack(p.proposal.lon, p.proposal.lat) : null;
+    el.querySelector('.km').textContent = p.bad ? 'illisible'
+      : p.proposal ? (pl ? `proposée · km ${fmt(U.dist(pl.d).v,1)}` : 'proposée')
+      : p.lat == null ? 'à placer'
       : !l ? '' : l.near ? `km ${fmt(U.dist(l.d).v,1)}` : 'hors trace';
     const cb = el.querySelector('input');
     cb.checked = photoIncluded(p);
     cb.disabled = !(l && l.near) || p.bad;
     cb.onchange = () => { p.include = cb.checked; writePhotoMemo([p]); refreshPhotos(); };
     el.querySelector('.th').onclick = () => {
-      if (p.lat == null) setClickMode({ type:'photo', photo:p });
-      else focusPhoto(p);
+      if (photoPos(p)) focusPhoto(p);
+      else setClickMode({ type:'photo', photo:p });
     };
     el.querySelector('.pin:not(.gps)').onclick = () => setClickMode(clickMode && clickMode.photo === p ? null : { type:'photo', photo:p });
     const g = el.querySelector('.pin.gps'); if (g) g.onclick = () => useGps([p]);
+    const ok = el.querySelector('.pin.ok'); if (ok) ok.onclick = () => acceptProposals([p]);
+    const ko = el.querySelector('.pin.ko'); if (ko) ko.onclick = () => rejectProposals([p]);
+    if (p.proposal) el.querySelector('.meta').title = p.proposal.detail;
     list.appendChild(el);
   }
 }
@@ -2599,8 +2848,9 @@ function flashPhoto(p){
 }
 let photoPopup = null;
 function focusPhoto(p){
-  if (!editing || p.lat == null) return;
-  map.easeTo({ center:[p.lon, p.lat], zoom:Math.max(map.getZoom(), 14), duration:600 });
+  const pos = photoPos(p);
+  if (!editing || !pos) return;
+  map.easeTo({ center:[pos.lon, pos.lat], zoom:Math.max(map.getZoom(), 14), duration:600 });
   showPhotoPopup(p);
   flashPhoto(p);
 }
@@ -2608,8 +2858,11 @@ function showPhotoPopup(p){
   if (photoPopup) photoPopup.remove();
   const box = document.createElement('div'); box.className = 'photo-pop';
   if (p.thumb){ const img = document.createElement('img'); img.src = p.thumb; box.appendChild(img); }
-  const cap = document.createElement('div'); cap.textContent = p.name; box.appendChild(cap);
-  photoPopup = new maplibregl.Popup({ offset:14, closeButton:true, maxWidth:'260px' }).setLngLat([p.lon, p.lat]).setDOMContent(box).addTo(map);
+  const cap = document.createElement('div');
+  cap.textContent = p.name + (p.proposal ? ' — proposée : ' + p.proposal.detail : '');
+  box.appendChild(cap);
+  const pos = photoPos(p);
+  photoPopup = new maplibregl.Popup({ offset:14, closeButton:true, maxWidth:'260px' }).setLngLat([pos.lon, pos.lat]).setDOMContent(box).addTo(map);
 }
 
 /* ---- sphères sur la carte interactive ---- */
@@ -2619,13 +2872,14 @@ function refreshPhotoMarkers(){
   if (photoPopup && !editing){ photoPopup.remove(); photoPopup = null; }
   if (!editing) return;
   for (const p of photos){
-    if (p.lat == null) continue;
+    const pos = photoPos(p);
+    if (!pos) continue;
     const l = photoLink(p);
     const el = document.createElement('div');
-    el.className = 'photo-marker' + (p.manual ? ' man' : '') + (l && l.near ? '' : ' out');
-    el.title = p.name;
+    el.className = 'photo-marker' + (p.proposal ? ' prop' : p.manual ? ' man' : '') + (p.proposal || (l && l.near) ? '' : ' out');
+    el.title = p.name + (p.proposal ? ' (proposée)' : '');
     el.addEventListener('click', ev => { ev.stopPropagation(); showPhotoPopup(p); flashPhoto(p); });
-    photoMarkers.push(new maplibregl.Marker({ element:el }).setLngLat([p.lon, p.lat]).addTo(map));
+    photoMarkers.push(new maplibregl.Marker({ element:el }).setLngLat([pos.lon, pos.lat]).addTo(map));
   }
 }
 
@@ -2864,7 +3118,7 @@ function syncLabels(){
   $('#exagV').textContent   = (+$('#exag').value).toFixed(1)+'×';
 }
 const PERSIST = ['title','subtitle','accent','units','showProfile','showCompass','showMinimap','trackWidth','prefetchExport',
-                 'photoDur','photoMaxDist','photoSlow','showPhotos','basemap','terrain','exag',
+                 'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','basemap','terrain','exag',
                  'zoom','pitch','anchor','ahead','smooth','inertia','maxrot','freedom',
                  'dur','intro','outro','pace','fps','bitrate'];
 function saveSettings(){
@@ -2919,7 +3173,8 @@ const onChange = (ids, fn) => ids.forEach(id => $('#'+id).addEventListener('inpu
 onChange(['title','subtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
 onChange(['showProfile','showCompass','showMinimap','prefetchExport']);
 onChange(['trackWidth'], applyTrackWidth);
-onChange(['photoDur','photoMaxDist','photoSlow','showPhotos'], refreshPhotos);
+onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle'], refreshPhotos);
+onChange(['photoClock']);
 onChange(['accent'], ()=>{ refreshAccent(); renderWpList(); if (editing) refreshMarkers(); });
 onChange(['pitch','anchor']);
 onChange(['zoom'], computeCameraTrackSafe);          // le rayon de liberté dépend du zoom
@@ -2953,6 +3208,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && clickMode)
 /* ---- photos ---- */
 $('#openPhotos').onclick = () => $('#photoDirInput').click();
 $('#photoUseGps').onclick = () => useGps(photos.filter(p => p.manual));
+$('#photoByTime').onclick = () => { if (!photos.length) toast('Chargez d’abord un dossier de photos.', true); else proposePhotoPositions(); };
 $('#photoDirInput').addEventListener('change', e => { if (e.target.files.length) loadPhotos(e.target.files); e.target.value = ''; });
 $('#clearPhotos').onclick = () => {
   if (!photos.length || exporting) return;
