@@ -23,7 +23,9 @@ body{
 #panel::-webkit-scrollbar-thumb{background:#2a3446;border-radius:8px;border:3px solid var(--panel)}
 #brand{padding:16px 18px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:5}
 #brand h1{margin:0;font-size:15px;letter-spacing:.02em}
-#brand p{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
+#brand p{margin:6px 0 0;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#projBtns{margin-top:10px}
+#projBtns button{font-weight:600}
 .grp{padding:14px 18px;border-bottom:1px solid var(--line)}
 .grp h3{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
 label{display:block;margin:0 0 9px;font-size:12px;color:var(--muted)}
@@ -64,6 +66,7 @@ button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
 #trackList .dot{flex:0 0 9px;height:9px;border-radius:50%;background:#7d8796}
 #trackList li.on .dot{background:var(--accent)}
 #trackList .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#trackList .mc{flex:0 0 auto;font-size:10.5px;color:var(--muted)}
 #trackList .ds{flex:0 0 auto;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}
 #trackList .del{flex:0 0 auto;padding:1px 6px;line-height:1;color:var(--muted);border-color:transparent;background:transparent;font-size:14px}
 #trackList .del:hover{color:var(--err);background:#f871711a}
@@ -117,7 +120,14 @@ button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
 body.tab-map #photoStrip{display:flex}
 body.tab-map #transport{visibility:hidden}
 #photoStrip .head{padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
-#photoStrip .head span{float:right;text-transform:none;letter-spacing:0}
+#photoStrip .head #photoCount{float:right;text-transform:none;letter-spacing:0}
+#photoStrip .head #stripTitle{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+#photoStrip .filters{display:flex;gap:4px;padding:8px 8px 0}
+#photoStrip .filters button{flex:1;padding:5px 2px;font-size:10.5px;color:var(--muted)}
+#photoStrip .filters button.on{background:#243044;border-color:#4d7ab8;color:var(--txt)}
+#photoStrip .filters b{font-weight:600;color:var(--txt);margin-left:2px}
+.ph .th .vid{position:absolute;right:6px;bottom:6px;background:#000b;color:#fff;font:600 10.5px/1 system-ui;padding:3px 6px;border-radius:5px}
+.photo-marker.vid::after{content:'';position:absolute;left:6px;top:4.5px;border-left:6px solid #fff;border-top:4px solid transparent;border-bottom:4px solid transparent}
 #photoList{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
 .ph{flex:0 0 auto;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden;transition:.12s}
 .ph.sel{border-color:var(--accent);box-shadow:0 0 0 2px #ffd23f40}
@@ -125,6 +135,9 @@ body.tab-map #transport{visibility:hidden}
 .ph.out{opacity:.55}
 .ph .th{position:relative;aspect-ratio:3/2;background:#0b0e13;cursor:pointer}
 .ph .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .th.wait::after{content:'aperçu en préparation…';position:absolute;inset:0;display:grid;place-items:center;font-size:11px;color:#6d7a90;
+  background:linear-gradient(100deg,#0b0e13 30%,#151b25 50%,#0b0e13 70%);background-size:200% 100%;animation:thumbwait 1.4s linear infinite}
+@keyframes thumbwait{from{background-position:100% 0}to{background-position:-100% 0}}
 .ph .th .ic{position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 system-ui;color:#fff}
 .ic.geo{background:radial-gradient(circle at 35% 30%,#fff 0 12%,#7fd3ff 30%,#1f6fb8 70%,#0b3a66);box-shadow:0 1px 4px #000a}
 .ic.man{background:radial-gradient(circle at 35% 30%,#fff 0 12%,#ffd27f 30%,#c07b12 70%,#6a3f05);box-shadow:0 1px 4px #000a}
@@ -135,6 +148,7 @@ body.tab-map #transport{visibility:hidden}
 .ph .meta input{accent-color:var(--accent);margin:0}
 .ph .km{margin-left:auto;font-variant-numeric:tabular-nums}
 .ph .pin{padding:1px 5px;font-size:11px;line-height:1.3}
+/* pas de « position » ici : MapLibre place ses marqueurs en absolu, la surcharger les empile */
 .photo-marker{width:18px;height:18px;border-radius:50%;cursor:pointer;background:radial-gradient(circle at 35% 30%,#fff 0 12%,#7fd3ff 30%,#1f6fb8 70%,#0b3a66);box-shadow:0 2px 6px #000b;border:1.5px solid #ffffffcc}
 .photo-marker.man{background:radial-gradient(circle at 35% 30%,#fff 0 12%,#ffd27f 30%,#c07b12 70%,#6a3f05)}
 .photo-marker.out{filter:grayscale(1);opacity:.7}
@@ -159,20 +173,23 @@ body.tab-map #transport{visibility:hidden}
 <aside id="panel">
   <div id="brand">
     <h1>GPX Cinematic</h1>
-    <p>Animation vidéo 16:9 de traces GPX</p>
+    <div class="row" id="projBtns">
+      <button id="openProject" title="Choisir le dossier du projet : le fichier .gpxcine.json et les dossiers de photos/vidéos sont retrouvés automatiquement">📂 Ouvrir</button>
+      <button id="saveProject" title="Enregistrer le projet (⌘S)">💾 Enregistrer</button>
+    </div>
+    <p id="projectInfo">Aucun projet ouvert</p>
+    <input type="file" id="projectFile" accept=".json,.gpx,application/json" multiple hidden>
   </div>
 
   <section class="grp">
     <label id="drop" for="file">
       <b>Déposer un fichier .gpx</b>
-      <small>un ou plusieurs .gpx, un dossier ou un projet .json</small>
+      <small>un ou plusieurs .gpx à ajouter au projet</small>
       <input type="file" id="file" multiple accept=".gpx,.json,application/gpx+xml,text/xml,application/json" hidden>
     </label>
     <div class="row" style="margin-top:10px">
-      <button id="openDir">📁 Ouvrir un dossier</button>
       <button id="clearTracks">Vider la liste</button>
     </div>
-    <input type="file" id="dirInput" webkitdirectory multiple hidden>
     <ul id="trackList"></ul>
     <p class="hint" id="trackHint" style="display:none">La vidéo est générée pour la trace active (surlignée). Les autres apparaissent en gris, avec leurs départs et arrivées.</p>
     <div id="trackInfo">Aucune trace chargée.</div>
@@ -182,6 +199,7 @@ body.tab-map #transport{visibility:hidden}
     <h3>Habillage</h3>
     <label>Titre<input type="text" id="title" placeholder="Nom du parcours"></label>
     <label>Sous-titre<input type="text" id="subtitle" placeholder="Date, lieu…"></label>
+    <label>Sous-titre de fin<input type="text" id="endSubtitle" placeholder="Affiché sous le titre de la carte de fin (vide : aucun)"></label>
     <div class="row">
       <label>Couleur<input type="color" id="accent" value="#ffd23f"></label>
       <label>Unités<select id="units"><option value="m">km / m</option><option value="i">mi / ft</option></select></label>
@@ -259,17 +277,21 @@ body.tab-map #transport{visibility:hidden}
   </section>
 
   <section class="grp">
-    <h3>Photos</h3>
+    <h3>Photos &amp; vidéos de la trace</h3>
     <div class="row">
-      <button id="openPhotos">📷 Dossier de photos</button>
-      <button id="clearPhotos" style="flex:0 0 90px">Retirer</button>
+      <button id="openPhotos">📁 Dossier de la trace active</button>
+      <button id="clearPhotos" style="flex:0 0 80px">Retirer</button>
     </div>
     <input type="file" id="photoDirInput" webkitdirectory multiple hidden>
     <button id="photoUseGps" style="display:none;width:100%;margin-top:8px"></button>
-    <p class="hint" id="photoInfo" style="margin:8px 0 10px">Aucune photo. Les photos géolocalisées proches de la trace active apparaissent dans la vidéo, en haut à droite.</p>
+    <p class="hint" id="photoInfo" style="margin:8px 0 10px">Chaque trace a ses propres photos et vidéos : sélectionnez une trace, puis chargez son dossier.</p>
     <div class="row">
       <label>Durée / photo (s)<input type="number" id="photoDur" value="3.5" min="1" max="15" step="0.5"></label>
       <label>Écart max. (m)<input type="number" id="photoMaxDist" value="200" min="20" max="5000" step="10"></label>
+    </div>
+    <div class="row">
+      <label>Vidéo max. (s)<input type="number" id="clipMax" value="12" min="2" max="120" step="1"></label>
+      <label></label>
     </div>
     <div class="row">
       <label>Présentation<select id="photoStyle">
@@ -280,17 +302,7 @@ body.tab-map #transport{visibility:hidden}
     </div>
     <button id="photoByTime" style="width:100%;margin:2px 0 10px">🕒 Proposer les positions par l’heure</button>
     <label class="chk"><input type="checkbox" id="photoSlow" checked> Ralentir le point aux photos</label>
-    <label class="chk" style="margin-top:6px"><input type="checkbox" id="showPhotos" checked> Photos dans la vidéo</label>
-  </section>
-
-  <section class="grp">
-    <h3>Projet</h3>
-    <div class="row">
-      <button id="saveProject">↓ Enregistrer (.json)</button>
-      <button id="openProject">↑ Ouvrir un projet</button>
-      <input type="file" id="projectFile" accept=".json,application/json" hidden>
-    </div>
-    <p class="hint">Le fichier contient la trace GPX, les points de passage et tous les réglages : il se recharge à l’identique.</p>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="showPhotos" checked> Photos et vidéos dans la vidéo</label>
   </section>
 
   <section class="grp">
@@ -331,7 +343,12 @@ body.tab-map #transport{visibility:hidden}
       </div>
     </div>
     <aside id="photoStrip">
-      <div class="head">Photos <span id="photoCount"></span></div>
+      <div class="head"><span id="stripTitle">Médias</span> <span id="photoCount"></span></div>
+      <div class="filters">
+        <button data-f="all" class="on">Tous <b></b></button>
+        <button data-f="geo">Géolocalisés <b></b></button>
+        <button data-f="unplaced">Non placés <b></b></button>
+      </div>
       <div id="photoList"></div>
     </aside>
   </div>
@@ -857,6 +874,8 @@ function rebuildWarp(){
   const links = includedPhotoLinks();
   if (!links.length) return;
   const dur = Math.max(1, +$('#photoDur').value || 3.5), slow = $('#photoSlow').checked;
+  const clipMax = Math.max(1, +$('#clipMax').value || 12);
+  const itemDur = p => p.kind === 'video' ? clamp(p.duration || 5, 1, clipMax) : dur;
 
   const gap = Math.max(150, track.total*0.02), clusters = [];
   for (const l of links){
@@ -871,7 +890,8 @@ function rebuildWarp(){
     c.dc = (c.dmin + c.dmax)/2;
     c.w = feature ? clamp((c.dmax - c.dmin)/2 + 60, 40, Math.max(40, track.total/2))
                   : clamp((c.dmax - c.dmin)/2 + 250, 150, Math.max(150, track.total/2));
-    c.extra = !slow ? 0 : feature ? c.items.length * dur + 0.8 : c.items.length * dur * 0.85;
+    c.span = c.items.reduce((s, l) => s + itemDur(l.photo), 0);          // temps d'affichage du groupe
+    c.extra = !slow ? 0 : feature ? c.span + 0.8 : c.span * 0.85;
   }
   const M = 3000, tB = TL.travelBase, T = new Float64Array(M+1), D = new Float64Array(M+1);
   for (let j=0; j<=M; j++){
@@ -891,9 +911,9 @@ function rebuildWarp(){
   let cursor = 0.3;
   for (const c of clusters){
     const n = c.items.length;
-    let start = Math.max(cursor, timeAtD(c.dc) - n*dur/2);
-    c.items.forEach((l, i) => photoPlan.push({ photo:l.photo, d:l.d, t0:start + i*dur, t1:start + (i+1)*dur, idx:i, count:n }));
-    cursor = start + n*dur;
+    let t = Math.max(cursor, timeAtD(c.dc) - c.span/2);
+    c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:n }); t += du; });
+    cursor = t;
   }
 }
 function progressForDistance(dd){
@@ -1229,9 +1249,45 @@ async function renderFrame(t, wait){
   const f = frameAt(t);
   applyCam(f.cam);
   pushDone(f.d);
-  if (wait) await waitIdle(); else map.triggerRepaint();
+  if (wait){ await waitIdle(); await syncVideos(f, true); }
+  else { map.triggerRepaint(); syncVideos(f, false); }
   composite(f);
   return f;
+}
+
+/* Place chaque clip à l'instant voulu. À l'export (exact) : pause et recherche
+   de l'image précise, attendue avant la capture. En lecture : le clip joue à
+   vitesse réelle et n'est recalé qu'en cas de dérive. */
+function seekVideo(v, t){
+  return new Promise(res => {
+    const done = () => { clearTimeout(to); v.removeEventListener('seeked', done); res(); };
+    const to = setTimeout(done, 4000);
+    v.addEventListener('seeked', done);
+    v.currentTime = t;
+  });
+}
+async function syncVideos(f, exact){
+  if (!photoPlan.length) return;
+  const on = track && photosActive(f), tt = f.t - TL.intro, F = FEATURE_FADE + 0.1;
+  const waits = [];
+  for (const e of photoPlan){
+    const p = e.photo;
+    if (p.kind !== 'video' || !p.el) continue;
+    const v = p.el;
+    if (!on || tt < e.t0 - F || tt > e.t1 + F){ if (!v.paused) v.pause(); continue; }
+    const ct = clamp(tt - e.t0, 0, Math.max(0, (p.duration || 0) - 0.05));
+    if (exact){
+      if (!v.paused) v.pause();
+      if (Math.abs(v.currentTime - ct) > 0.001) waits.push(seekVideo(v, ct));
+    } else if (playing && tt >= e.t0 && tt <= e.t1){
+      if (Math.abs(v.currentTime - ct) > 0.3) v.currentTime = ct;
+      if (v.paused) v.play().catch(() => {});
+    } else {
+      if (!v.paused) v.pause();
+      if (Math.abs(v.currentTime - ct) > 0.04) v.currentTime = ct;
+    }
+  }
+  if (waits.length) await Promise.all(waits);
 }
 </script>
 
@@ -1829,10 +1885,10 @@ function drawPhotoCards(f){
   for (const e of shown){
     const a = clamp((tt - (e.t0 - fade))/(2*fade), 0, 1) * clamp(((e.t1 + fade) - tt)/(2*fade), 0, 1) * fadeOut;
     if (a < 0.01) continue;
-    const bmp = e.photo.bmp;
-    if (!bmp){ photoBitmap(e.photo); continue; }          // décodage lancé, affichée dès qu'elle est prête
-    const maxW = 540, maxH = 400, k = Math.min(maxW/bmp.width, maxH/bmp.height);
-    const iw = Math.round(bmp.width*k), ih = Math.round(bmp.height*k);
+    const src = mediaSource(e.photo);
+    if (!src) continue;                                   // décodage lancé, affichée dès qu'elle est prête
+    const maxW = 540, maxH = 400, k = Math.min(maxW/src.w, maxH/src.h);
+    const iw = Math.round(src.w*k), ih = Math.round(src.h*k);
     const pad = 10, capH = 40, fw = iw + 2*pad, fh = ih + pad + capH;
     const s = 0.94 + 0.06*easeOutCubic(a);
     const x = W - 48 - fw, y = 48;
@@ -1842,7 +1898,7 @@ function drawPhotoCards(f){
     shadow(34, 0.55, 10);
     ctx.fillStyle = '#f7f5f0'; rrect(0, 0, fw, fh, 6); ctx.fill();
     noShadow();
-    ctx.drawImage(bmp, pad, pad, iw, ih);
+    ctx.drawImage(src.img, pad, pad, iw, ih);
     ctx.fillStyle = '#2b2b2b'; ctx.font = FONT(600, 20); ctx.textAlign = 'left';
     const dt = e.photo.date;
     const cap = e.photo.caption || (dt ? dt.toLocaleDateString('fr-FR', { day:'numeric', month:'long' }) + ' · ' +
@@ -1859,6 +1915,16 @@ function drawPhotoCards(f){
   ctx.textAlign = 'left'; ctx.globalAlpha = 1;
 }
 
+/* Image à dessiner pour un média : bitmap de la photo, ou image courante du clip. */
+function mediaSource(p){
+  if (p.kind === 'video'){
+    const v = p.el;
+    if (!v || v.readyState < 2 || !v.videoWidth){ if (!v && !p.bad) probeVideo(p); return null; }
+    return { img:v, w:v.videoWidth, h:v.videoHeight, video:true };
+  }
+  if (!p.bmp){ photoBitmap(p); return null; }
+  return { img:p.bmp, w:p.bmp.width, h:p.bmp.height, video:false };
+}
 /* « Mise en avant » : la photo s'envole de sa sphère sur la carte jusqu'au grand
    format centré, zoome très lentement (Ken Burns), puis y retourne. Les photos
    d'un même groupe s'enchaînent en fondu, sans repasser par la carte. */
@@ -1873,8 +1939,8 @@ function drawPhotoFeature(f){
   for (let i=0; i<photoPlan.length; i++){
     const e = photoPlan[i];
     if (tt < e.t0 - F || tt > e.t1 + F) continue;
-    const bmp = e.photo.bmp;
-    if (!bmp){ photoBitmap(e.photo); continue; }
+    const src = mediaSource(e.photo);
+    if (!src) continue;
     const prev = photoPlan[i-1], next = photoPlan[i+1];
     const chainIn  = prev && Math.abs(prev.t1 - e.t0) < 0.05;
     const chainOut = next && Math.abs(next.t0 - e.t1) < 0.05;
@@ -1887,18 +1953,18 @@ function drawPhotoFeature(f){
     a *= fadeOut;
     if (a < 0.01) continue;
 
-    const k = Math.min(1500/bmp.width, 860/bmp.height);
-    const iw = bmp.width*k, ih = bmp.height*k;
+    const k = Math.min(1500/src.w, 860/src.h);
+    const iw = src.w*k, ih = src.h*k;
     const cx = W/2, cy = H/2 - 10;
     const q = map.project([e.photo.lon, e.photo.lat]);
     const sx = isFinite(q.x) ? clamp(q.x, 0, W) : cx, sy = isFinite(q.y) ? clamp(q.y, 0, H) : cy;
     const s = lerp(0.05, 1, g), x = lerp(sx, cx, g), y = lerp(sy, cy, g);
 
-    // Ken Burns : zoom lent, léger glissement alterné d'une photo à l'autre
+    // Ken Burns (photos seulement) : zoom lent, léger glissement alterné
     const prog = clamp((tt - (e.t0 - F)) / ((e.t1 - e.t0) + 2*F), 0, 1);
-    const z = 1 + 0.08*prog, dir = i % 2 ? 1 : -1;
-    const sw = bmp.width/z, sh = bmp.height/z;
-    const srcX = (bmp.width - sw) * (0.5 + 0.4*dir*(prog - 0.5)), srcY = (bmp.height - sh) * (0.5 - 0.2*(prog - 0.5));
+    const z = src.video ? 1 : 1 + 0.08*prog, dir = i % 2 ? 1 : -1;
+    const sw = src.w/z, sh = src.h/z;
+    const srcX = (src.w - sw) * (0.5 + 0.4*dir*(prog - 0.5)), srcY = (src.h - sh) * (0.5 - 0.2*(prog - 0.5));
 
     ctx.save();
     ctx.globalAlpha = a;
@@ -1907,7 +1973,7 @@ function drawPhotoFeature(f){
     ctx.fillStyle = '#000'; rrect(-iw/2, -ih/2, iw, ih, 16); ctx.fill();
     noShadow();
     ctx.save(); rrect(-iw/2, -ih/2, iw, ih, 16); ctx.clip();
-    ctx.drawImage(bmp, srcX, srcY, sw, sh, -iw/2, -ih/2, iw, ih);
+    ctx.drawImage(src.img, srcX, srcY, sw, sh, -iw/2, -ih/2, iw, ih);
     ctx.restore();
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5/s; rrect(-iw/2, -ih/2, iw, ih, 16); ctx.stroke();
     ctx.restore();
@@ -1926,7 +1992,7 @@ function drawPhotoFeature(f){
       ctx.fillText(photoCaption(e), bx + 30, by - 28);
       const dd = U.dist(e.d);
       ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = FONT(500, 22);
-      ctx.fillText(`km ${fmt(dd.v,1)}` + (e.count > 1 ? `  ·  ${e.idx+1} / ${e.count}` : ''), bx + iw - 30, by - 30);
+      ctx.fillText((src.video ? '▶ vidéo  ·  ' : '') + `km ${fmt(dd.v,1)}` + (e.count > 1 ? `  ·  ${e.idx+1} / ${e.count}` : ''), bx + iw - 30, by - 30);
       noShadow(); ctx.restore();
     }
   }
@@ -1966,10 +2032,11 @@ function drawEndCard(f, acc){
   ctx.globalAlpha=a*0.55; ctx.fillStyle='#05070a'; ctx.fillRect(0,0,W,H);
   ctx.globalAlpha=a; ctx.textAlign='center';
   const y = H/2 + 120 + (1-a)*26;
-  const title=$('#title').value.trim();
-  if (title){ shadow(24,0.7,3); ctx.fillStyle='#fff'; ctx.font=FONT(700,64); ctx.fillText(title, W/2, y-96); noShadow(); }
-  const sub=$('#subtitle').value.trim();
-  if (sub){ ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font=FONT(500,26); ctx.fillText(sub, W/2, y-54); }
+  // les chiffres sont affichés juste en dessous : on ne répète pas le sous-titre
+  // d'intro, on montre le sous-titre de fin saisi (aucune ligne s'il est vide)
+  const title=$('#title').value.trim(), sub=$('#endSubtitle').value.trim();
+  if (title){ shadow(24,0.7,3); ctx.fillStyle='#fff'; ctx.font=FONT(700,64); ctx.fillText(title, W/2, y - (sub ? 96 : 76)); noShadow(); }
+  if (sub){ shadow(14,0.7,2); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=FONT(500,28); ctx.fillText(sub, W/2, y-52); noShadow(); }
 
   const d=U.dist(track.total), e=U.elev(track.gain);
   const items=[{v:fmt(d.v,1),u:d.u,l:'DISTANCE'}];
@@ -2019,6 +2086,7 @@ function renderPreview(){
   const f = frameAt(curT);
   applyCam(f.cam); pushDone(f.d);
   map.redraw();                       // rendu synchrone : aucun décalage d'image
+  syncVideos(f, false);
   updateClock(f);
   if (!playing){
     // tuiles incomplètes : on montre quand même l'image (retour immédiat au
@@ -2040,7 +2108,7 @@ function setPlaying(v){
     if (curT >= TL.total-0.01) curT = 0;
     lastTs = performance.now();
     rafId = requestAnimationFrame(tick);
-  } else if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
+  } else { if (rafId){ cancelAnimationFrame(rafId); rafId=null; } pauseAllVideos(); }
 }
 function tick(ts){
   if (!playing) return;
@@ -2088,14 +2156,19 @@ const cleanColor = c => /^#[0-9a-f]{6}$/i.test(c||'') ? c : null;
 function buildEntry(text, filename, saved){
   const g  = parseGPX(text);
   const tk = buildTrack(g.points);
-  const e  = { id:nextTrackId++, gpxText:text, gpxName:filename || 'trace.gpx', g, track:tk };
+  const e  = { id:nextTrackId++, gpxText:text, gpxName:filename || 'trace.gpx', g, track:tk, media:[], expectedMedia:0, savedMedia:[], mediaFolder:'' };
   if (saved){
     e.waypoints = (saved.waypoints || []).map(w=>{
       const d = clamp(+w.d || 0, 0, tk.total), s = stateAt(tk, d);
-      return { name:w.name || 'Point', d, lon:s.lon, lat:s.lat, kind:w.kind || null, color:cleanColor(w.color) };
+      // position exacte si elle a été enregistrée (balise GPX éloignée de la trace)
+      const own = Number.isFinite(w.lat) && Number.isFinite(w.lon);
+      return { name:w.name || 'Point', d, lon: own ? w.lon : s.lon, lat: own ? w.lat : s.lat, kind:w.kind || null, color:cleanColor(w.color) };
     }).sort((a,b)=>a.d-b.d);
+    e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
+    e.mediaFolder = saved.mediaFolder || '';
     e.title     = saved.title ?? (g.name || '');
     e.subtitle  = saved.subtitle ?? defaultSubtitle(tk);
+    e.endSubtitle = saved.endSubtitle ?? '';
     e.dur       = +saved.dur || defaultDur(tk);
     e.startName = saved.startName ?? 'Départ';
     e.endName   = saved.endName ?? 'Arrivée';
@@ -2106,6 +2179,7 @@ function buildEntry(text, filename, saved){
     }).sort((a,b)=>a.d-b.d);
     e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
     e.subtitle  = defaultSubtitle(tk);
+    e.endSubtitle = '';
     e.dur       = defaultDur(tk);
     e.startName = 'Départ';
     e.endName   = 'Arrivée';
@@ -2137,24 +2211,27 @@ function activate(id){
   const inMap = editing;
   if (editing) setEditing(false);
   setPlaying(false);
-  activeId = id; track = e.track; waypoints = e.waypoints;
+  pauseAllVideos();
+  activeId = id; track = e.track; waypoints = e.waypoints; photos = e.media;
   $('#title').value = e.title;         $('#subtitle').value = e.subtitle;
+  $('#endSubtitle').value = e.endSubtitle || '';
   $('#dur').value = e.dur;
   $('#startName').value = e.startName; $('#endName').value = e.endName;
   syncLabels(); rebuildMotion();
   lastDoneIdx=-1; invalidateOverview(); curT=0;
   mini = null; scheduleMinimap();
   pushRoute(); renderWpList(); showTrackInfo(); renderTrackList();
-  updatePhotoInfo(); renderPhotoStrip();
+  updatePhotoInfo(); renderPhotoStrip(); makeThumbs();
   if (inMap) setEditing(true);
   renderPreview(); refreshPreviewSoon();
 }
 function clearActive(){
   if (tab === 'map') setTab('video'); else if (editing) setEditing(false);
   setPlaying(false);
-  activeId = null; track = null; waypoints = []; warp = null; photoPlan = []; photoLinkCache = new Map();
+  pauseAllVideos();
+  activeId = null; track = null; waypoints = []; photos = []; warp = null; photoPlan = []; photoLinkCache = new Map();
   renderPhotoStrip(); updatePhotoInfo();
-  $('#title').value = ''; $('#subtitle').value = '';
+  $('#title').value = ''; $('#subtitle').value = ''; $('#endSubtitle').value = '';
   pushRoute();
   if (map.getSource('done')) map.getSource('done').setData(EMPTY);
   renderWpList(); renderTrackList(); updateClock();
@@ -2165,6 +2242,7 @@ function removeTrack(id){
   if (exporting) return;
   const i = tracks.findIndex(t => t.id === id);
   if (i < 0) return;
+  releaseMedia(tracks[i].media);
   tracks.splice(i, 1);
   if (id !== activeId){ pushRoute(); renderTrackList(); renderPreview(); return; }
   if (tracks.length) activate(tracks[Math.min(i, tracks.length-1)].id);
@@ -2174,6 +2252,7 @@ function removeTrack(id){
 function rememberTrackFields(){
   const e = activeEntry(); if (!e) return;
   e.title = $('#title').value;          e.subtitle = $('#subtitle').value;
+  e.endSubtitle = $('#endSubtitle').value;
   e.dur = +$('#dur').value;
   e.startName = $('#startName').value; e.endName = $('#endName').value;
 }
@@ -2186,12 +2265,17 @@ function renderTrackList(){
     const dot = document.createElement('span'); dot.className = 'dot';
     const nm  = document.createElement('span'); nm.className = 'nm';
     nm.textContent = t.title || t.gpxName; nm.title = t.gpxName;
+    const mc  = document.createElement('span'); mc.className = 'mc';
+    const nv = t.media.filter(m => m.kind === 'video').length, np = t.media.length - nv;
+    mc.textContent = [np ? `📷 ${np}` : '', nv ? `🎬 ${nv}` : ''].filter(Boolean).join(' ');
+    mc.title = t.expectedMedia && !t.media.length ? `${t.expectedMedia} média(s) référencé(s) par le projet : rechargez le dossier${t.mediaFolder ? ' « ' + t.mediaFolder + ' »' : ''}` : (t.mediaFolder ? 'Dossier : ' + t.mediaFolder : '');
+    if (t.expectedMedia && !t.media.length) mc.textContent = `⚠ ${t.expectedMedia}`;
     const ds  = document.createElement('span'); ds.className = 'ds';
     const dd = U.dist(t.track.total); ds.textContent = `${fmt(dd.v,1)} ${dd.u}`;
     const del = document.createElement('button'); del.className = 'del'; del.textContent = '×'; del.title = 'Retirer cette trace';
     del.onclick = ev => { ev.stopPropagation(); removeTrack(t.id); };
     li.onclick = () => { if (t.id !== activeId) activate(t.id); };
-    li.append(dot, nm, ds, del); ul.appendChild(li);
+    li.append(dot, nm, mc, ds, del); ul.appendChild(li);
   }
   $('#trackHint').style.display = tracks.length > 1 ? '' : 'none';
 }
@@ -2199,7 +2283,7 @@ function renderTrackList(){
 /* ---- chargement de fichiers --------------------------------------------- */
 async function loadFiles(files, dirName){
   files = [...files];
-  const imgs = files.filter(f => /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
+  const imgs = files.filter(f => MEDIA_RE.test(f.name));
   if (imgs.length){
     files = files.filter(f => !imgs.includes(f));
     if (!files.some(f => /\.(gpx|json)$/i.test(f.name))) return loadPhotos(imgs);
@@ -2226,6 +2310,7 @@ async function loadFiles(files, dirName){
   if (dirName) projectBase = dirName;
   if (added.length) activate(added[0].id);
   else renderTrackList();
+  updateProjectInfo();
   if (errors.length) toast(`${errors.length} fichier(s) ignoré(s) — ${errors[0]}`, true);
   else if (added.length === 1){
     const dd = U.dist(added[0].track.total);
@@ -2301,28 +2386,39 @@ function applySettings(o){
   if (bm !== currentBasemap) setBasemap(bm);      // recharge le style et l'aperçu
   else { refreshAccent(); applyTerrain(); }
 }
-function saveProject(){
-  if (!tracks.length){ toast('Chargez d’abord une trace GPX.', true); return; }
+/* Métadonnées de médias à enregistrer : celles des médias chargés, plus celles
+   que le projet d'origine contenait pour des fichiers pas (encore) rechargés.
+   Sans cela, réenregistrer un projet sans avoir rechargé tous les dossiers
+   effaçait les positions placées à la main des traces non rechargées. */
+function mediaMetaForSave(t){
+  const loaded = t.media.map(p => ({ key:p.key, name:p.name, kind:p.kind, manual:p.manual,
+                                     lat:p.manual ? p.lat : null, lon:p.manual ? p.lon : null, include:p.include ?? null,
+                                     pass:p.passD ?? null }));
+  // un fichier rechargé remplace l'ancienne entrée du même nom (même si sa clé a
+  // changé : fichier retouché, date modifiée…) — pas de doublon qui s'accumule
+  const keys = new Set(loaded.map(m => m.key)), names = new Set(loaded.map(m => m.name));
+  return loaded.concat((t.savedMedia || []).filter(m => !keys.has(m.key) && !names.has(m.name)));
+}
+function buildProjectData(){
   rememberTrackFields();
-  const data = {
+  return {
     format:'gpx-cinematic', version:2, savedAt:new Date().toISOString(),
     name: projectBase || null,
     settings: collectSettings(),
     active: Math.max(0, tracks.findIndex(t => t.id === activeId)),
     tracks: tracks.map(t => ({
       gpx:{ filename:t.gpxName, content:t.gpxText },
-      title:t.title, subtitle:t.subtitle, dur:t.dur, startName:t.startName, endName:t.endName,
-      waypoints: t.waypoints.map(w=>({ name:w.name, d:Math.round(w.d*100)/100, kind:w.kind||null, color:w.color||null }))
-    })),
-    // les images ne sont pas embarquées : seulement ce qui ne se retrouve pas dans leurs fichiers
-    photos: photos.map(p => ({ key:p.key, name:p.name, manual:p.manual,
-                               lat:p.manual ? p.lat : null, lon:p.manual ? p.lon : null, include:p.include ?? null }))
+      title:t.title, subtitle:t.subtitle, endSubtitle:t.endSubtitle || '', dur:t.dur, startName:t.startName, endName:t.endName,
+      waypoints: t.waypoints.map(w=>({ name:w.name, d:Math.round(w.d*100)/100, kind:w.kind||null, color:w.color||null,
+                                       lat:Math.round(w.lat*1e7)/1e7, lon:Math.round(w.lon*1e7)/1e7 })),
+      mediaFolder: t.mediaFolder || '',
+      // les médias ne sont pas embarqués : seulement ce qui ne se retrouve pas dans leurs fichiers
+      media: mediaMetaForSave(t)
+    }))
   };
-  download(new Blob([JSON.stringify(data, null, 1)], {type:'application/json'}),
-           `${projectSlug()}.gpxcine.json`);
-  toast(`Projet enregistré ✔ (${tracks.length} trace${tracks.length>1?'s':''})`);
 }
-function openProject(data){
+const saveProject = saveProjectFlow;
+function openProject(data, fromDir){
   if (!data || data.format !== 'gpx-cinematic') throw new Error('Ce fichier n’est pas un projet GPX Cinematic.');
   let list, active = 0;
   if (Array.isArray(data.tracks) && data.tracks.length){ list = data.tracks; active = data.active|0; }
@@ -2333,17 +2429,29 @@ function openProject(data){
   } else throw new Error('Projet sans trace GPX.');
 
   const built = list.map(it => buildEntry(it.gpx.content, it.gpx.filename, it));   // lève si un GPX est invalide
-  if (Array.isArray(data.photos) && data.photos.length){
-    writePhotoMemo(data.photos);                              // retrouvées à la prochaine ouverture du dossier
-    const byKey = new Map(data.photos.map(m => [m.key, m]));
-    for (const p of photos) applyPhotoMeta(p, byKey.get(p.key));
-    if (!photos.length) setTimeout(() => toast(`Ce projet référence ${data.photos.length} photo(s) : rechoisissez leur dossier (section Photos).`), 1500);
+  // positions manuelles et choix mémorisés : ils s'appliqueront au rechargement des dossiers
+  if (Array.isArray(data.photos) && data.photos.length){                  // ancien format : une liste globale
+    writePhotoMemo(data.photos);
+    const owner = built[clamp(active, 0, built.length-1)];                 // elle suivait la trace active
+    if (!owner.savedMedia.length){ owner.savedMedia = data.photos; owner.expectedMedia = data.photos.length; }
+  }
+  list.forEach((it, i) => {
+    if (Array.isArray(it.media) && it.media.length){ writePhotoMemo(it.media); built[i].expectedMedia = it.media.length; }
+  });
+  if (!fromDir){                                     // ouvert depuis un simple fichier .json
+    projectDir = null; projectFileHandle = null; projectFilePath = '';
+    const waiting = built.filter(e => e.expectedMedia).length;
+    if (waiting) setTimeout(() => toast(HAS_FSA
+      ? `${waiting} trace(s) ont des photos/vidéos : pour les recharger automatiquement, ouvrez plutôt le dossier du projet (📂 Ouvrir).`
+      : `${waiting} trace(s) ont des photos/vidéos : sélectionnez chaque trace (⚠) et rechoisissez son dossier.`), 800);
   }
   applySettings(data.settings || {});
+  tracks.forEach(t => releaseMedia(t.media));
   tracks = built;
   projectBase = data.name || null;
   activate(tracks[clamp(active, 0, tracks.length-1)].id);
-  toast(`Projet rechargé : ${tracks.length} trace${tracks.length>1?'s':''}`);
+  if (!fromDir) toast(`Projet rechargé : ${tracks.length} trace${tracks.length>1?'s':''}`);
+  updateProjectInfo();
 }
 
 function showTrackInfo(){
@@ -2517,40 +2625,527 @@ const photoKey = f => `${f.name}|${f.size}|${f.lastModified}`;
 function readPhotoMemo(){ try { return JSON.parse(localStorage.getItem(PHOTO_MEMO) || '{}'); } catch(e){ return {}; } }
 function writePhotoMemo(entries){
   const m = readPhotoMemo();
-  for (const e of entries) m[e.key] = { manual:!!e.manual, lat:e.manual ? e.lat : null, lon:e.manual ? e.lon : null, include:e.include ?? null };
+  for (const e of entries) m[e.key] = { manual:!!e.manual, lat:e.manual ? e.lat : null, lon:e.manual ? e.lon : null, include:e.include ?? null,
+                                         pass: e.passD ?? e.pass ?? null };
   try { localStorage.setItem(PHOTO_MEMO, JSON.stringify(m)); } catch(e){}
 }
 function applyPhotoMeta(p, m){
   if (!m) return;
   if (m.manual && Number.isFinite(m.lat) && Number.isFinite(m.lon)){ p.lat = m.lat; p.lon = m.lon; p.manual = true; }
   if (typeof m.include === 'boolean') p.include = m.include;
+  if (Number.isFinite(m.pass)) p.passD = m.pass;
 }
 
 /* Rattachement à la trace active : point le plus proche, et écart latéral. */
 let photoLinkCache = new Map();
+/* Tous les passages de la trace près d'un point : sur un aller-retour ou une
+   boucle, la même route est parcourue plusieurs fois. Un passage = une portion
+   continue de trace à moins de maxD ; on en garde le point le plus proche. */
+function trackPasses(tk, lon, lat, maxD){
+  const S = tk.samples, kx = Math.cos(lat*D2R) * 111320, ky = 110574, runs = [];
+  let cur = null;
+  for (let i = 0; i < S.length; i++){
+    const off = Math.hypot((S[i].lon - lon)*kx, (S[i].lat - lat)*ky);
+    if (off <= maxD){
+      if (!cur){ cur = { d:S[i].d, off }; runs.push(cur); }
+      else if (off < cur.off){ cur.d = S[i].d; cur.off = off; }
+    } else cur = null;
+  }
+  return runs;
+}
+/* Heure d'un média, sur une horloge commune (UTC si on peut, sinon celle de l'appareil). */
+function mediaTime(p, off){
+  const utc = p.utc != null ? p.utc : p.wall == null ? null
+            : p.tzMin != null ? p.wall - p.tzMin*60e3 : off ? p.wall - off.ms : null;
+  return utc != null ? utc : p.wall;
+}
+/* Rattachement de chaque média à la trace active.
+   Quand un média est près de plusieurs passages (aller-retour), le plus proche
+   n'est pas forcément le bon : on choisit, pour tous les médias à la fois, les
+   passages qui respectent l'ordre chronologique des prises de vue (une photo
+   plus tardive est plus loin sur la trace) tout en restant au plus près de la
+   trace. Programmation dynamique sur la suite des médias triés par heure ; un
+   retour en arrière n'est pas interdit (horloge fausse) mais fortement pénalisé.
+   Un choix manuel (⇄) l'emporte toujours. */
 function computePhotoLinks(){
   photoLinkCache = new Map();
   if (!track) return;
-  const maxD = Math.max(1, +$('#photoMaxDist').value || 200);
+  const maxD = Math.max(1, +$('#photoMaxDist').value || 200), off = cameraOffset();
+  const seq = [];
   for (const p of photos){
     if (p.lat == null) continue;
-    const s = snapToTrack(p.lon, p.lat);
-    const off = haversine({ lon:p.lon, lat:p.lat }, { lon:s.lon, lat:s.lat });
-    photoLinkCache.set(p, { d:s.d, off, near: off <= maxD });
+    const passes = trackPasses(track, p.lon, p.lat, maxD);
+    if (!passes.length){
+      const s = snapToTrack(p.lon, p.lat);
+      photoLinkCache.set(p, { d:s.d, off:haversine({ lon:p.lon, lat:p.lat }, s), near:false, passes:[] });
+      continue;
+    }
+    let cands = passes;
+    if (p.passD != null) cands = [passes.reduce((a, b) => Math.abs(b.d - p.passD) < Math.abs(a.d - p.passD) ? b : a)];
+    const nearest = cands.reduce((a, b) => b.off < a.off ? b : a);
+    photoLinkCache.set(p, { d:nearest.d, off:nearest.off, near:true, passes });
+    const t = mediaTime(p, off);
+    if (t != null) seq.push({ p, t, cands });
+  }
+  if (seq.length < 2) return;
+  seq.sort((a, b) => a.t - b.t);
+  const TOL = 60, BACK = 1e6;                   // tolérance (m) et pénalité d'un retour en arrière
+  const cost = seq.map(s => s.cands.map(() => ({ v:Infinity, from:-1 })));
+  seq[0].cands.forEach((c, j) => { cost[0][j].v = c.off; });
+  for (let i = 1; i < seq.length; i++)
+    seq[i].cands.forEach((c, j) => {
+      seq[i-1].cands.forEach((pc, k) => {
+        const v = cost[i-1][k].v + c.off + (c.d + TOL < pc.d ? BACK : 0);
+        if (v < cost[i][j].v) cost[i][j] = { v, from:k };
+      });
+    });
+  let j = cost[seq.length-1].reduce((b, c, k, arr) => c.v < arr[b].v ? k : b, 0);
+  for (let i = seq.length - 1; i >= 0; i--){
+    const c = seq[i].cands[j], link = photoLinkCache.get(seq[i].p);
+    link.d = c.d; link.off = c.off;
+    j = cost[i][j].from;
   }
 }
 const photoLink = p => photoLinkCache.get(p) || null;
-const photoIncluded = p => { const l = photoLink(p); return !!(l && l.near && !p.bad && (p.include ?? true)); };
+/* Près de la trace : retenu sauf si décoché. Hors trace (détour à pied…) :
+   seulement si coché à la main ; il s'affiche au point le plus proche de la trace. */
+const photoIncluded = p => { const l = photoLink(p); return !!(l && !p.bad && (l.near ? (p.include ?? true) : p.include === true)); };
 function includedPhotoLinks(){
   computePhotoLinks();
   if (!$('#showPhotos').checked) return [];
   return photos.filter(photoIncluded).map(p => ({ photo:p, d:photoLink(p).d })).sort((a,b) => a.d - b.d);
 }
 
-async function loadPhotos(files){
-  files = [...files].filter(f => /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name))
+/* Lecture des métadonnées utiles d'une vidéo MP4/MOV (position, date), en ne
+   lisant que la boîte « moov ». Deux emplacements possibles pour la position :
+   moov/meta (clés QuickTime, iPhone et la plupart des appareils récents :
+   com.apple.quicktime.location.ISO6709) et moov/udta/©xyz (Android, anciens
+   formats). La date vient de com.apple.quicktime.creationdate (avec fuseau) ;
+   à défaut, de mvhd (UTC, mais souvent réécrite par les logiciels d'export). */
+async function readVideoMeta(file){
+  const out = { lat:null, lon:null, utc:null, wall:null, tzMin:null };
+  const size = file.size;
+  const u8 = async (a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer());
+  const typeOf = (b, o) => String.fromCharCode(b[o], b[o+1], b[o+2], b[o+3]);
+  const u32 = (b, o) => ((b[o]<<24)>>>0) + (b[o+1]<<16) + (b[o+2]<<8) + b[o+3];
+  const u64 = (b, o) => u32(b, o)*4294967296 + u32(b, o+4);
+  // 1. boîtes de premier niveau jusqu'à « moov » (souvent après « mdat », qu'on saute)
+  let off = 0, moov = null;
+  while (off + 8 <= size){
+    const h = await u8(off, Math.min(size, off+16));
+    let len = u32(h, 0), hdr = 8;
+    if (len === 1){ len = u64(h, 8); hdr = 16; } else if (len === 0) len = size - off;
+    if (len < hdr) break;
+    if (typeOf(h, 4) === 'moov'){ if (len > 64*1024*1024) break; moov = { b: await u8(off, off+len), hdr }; break; }
+    off += len;
+  }
+  if (!moov) return out;
+  const B = moov.b, dec = new TextDecoder();
+  const text = (o, n) => dec.decode(B.subarray(o, o+n)).replace(/\0+$/, '');
+  const kids = (start, end) => {
+    const list = []; let o = start;
+    while (o + 8 <= end){
+      let len = u32(B, o), hdr = 8;
+      if (len === 1){ len = u64(B, o+8); hdr = 16; } else if (len === 0) len = end - o;
+      if (len < hdr || o + len > end) break;
+      list.push({ type:typeOf(B, o+4), o, start:o+hdr, end:o+len });
+      o += len;
+    }
+    return list;
+  };
+  const setPos = s => {
+    const m = /([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/.exec(s || '');
+    if (m && out.lat == null){ out.lat = +m[1]; out.lon = +m[2]; }
+  };
+  const setDate = s => {
+    const m = /(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d+)?(Z|([+-])(\d\d):?(\d\d))?/.exec(s || '');
+    if (!m) return;
+    out.wall = Date.UTC(+m[1], m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+    if (m[7]){ out.tzMin = m[7] === 'Z' ? 0 : (m[8] === '-' ? -1 : 1) * (+m[9]*60 + +m[10]); out.utc = out.wall - out.tzMin*60e3; }
+  };
+  let mvhdUtc = null;
+  for (const b of kids(moov.hdr, B.length)){
+    if (b.type === 'mvhd'){
+      const secs = B[b.start] === 1 ? u64(B, b.start+4) : u32(B, b.start+4);
+      if (secs > 0) mvhdUtc = (secs - 2082844800) * 1000;          // secondes depuis 1904
+    } else if (b.type === 'udta'){
+      for (const c of kids(b.start, b.end)) if (c.type === '©xyz') setPos(text(c.start+4, u32(B, c.start) >>> 16));
+    } else if (b.type === 'meta'){
+      // « meta » QuickTime : sans version ; « meta » ISO : 4 octets version/drapeaux
+      let st = b.start;
+      if (typeOf(B, st+4) !== 'hdlr' && typeOf(B, st+8) === 'hdlr') st += 4;
+      const k = kids(st, b.end), keysB = k.find(x => x.type === 'keys'), ilst = k.find(x => x.type === 'ilst');
+      const keys = [];
+      if (keysB){
+        let o = keysB.start + 4; const n = u32(B, o); o += 4;
+        for (let i=0; i<n && o+8 <= keysB.end; i++){ const len = u32(B, o); keys.push(text(o+8, len-8)); o += len; }
+      }
+      if (ilst) for (const it of kids(ilst.start, ilst.end)){
+        const key = keys[u32(B, it.o+4) - 1];
+        const data = kids(it.start, it.end).find(x => x.type === 'data');
+        if (!key || !data) continue;
+        const val = text(data.start + 8, data.end - data.start - 8);
+        if (key === 'com.apple.quicktime.location.ISO6709') setPos(val);
+        else if (key === 'com.apple.quicktime.creationdate') setDate(val);
+      }
+    }
+  }
+  if (out.utc == null && out.wall == null && mvhdUtc != null) out.utc = mvhdUtc;
+  return out;
+}
+
+const PHOTO_RE = /\.(jpe?g|png|webp|heic|heif)$/i, VIDEO_RE = /\.(mp4|mov|m4v|webm)$/i;
+const MEDIA_RE = /\.(jpe?g|png|webp|heic|heif|mp4|mov|m4v|webm)$/i;
+
+/* Élément <video> d'un clip : durée, dimensions, vignette. Il sert ensuite à
+   la lecture dans l'aperçu et à l'extraction image par image à l'export. */
+function probeVideo(p){
+  if (p.el && p.duration) return Promise.resolve(true);
+  return new Promise(res => {
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    p.url = p.url || URL.createObjectURL(p.file);
+    let settled = false;
+    const done = ok => { if (settled) return; settled = true; clearTimeout(to); res(ok); };
+    const to = setTimeout(() => done(false), 10000);
+    v.onloadedmetadata = () => {
+      p.duration = v.duration; p.vw = v.videoWidth; p.vh = v.videoHeight;
+      v.currentTime = Math.min(0.6, v.duration/2);
+    };
+    v.onseeked = () => {
+      if (settled) return;
+      try {
+        const k = 320 / Math.max(1, v.videoWidth), c = document.createElement('canvas');
+        c.width = Math.round(v.videoWidth*k); c.height = Math.round(v.videoHeight*k);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob(b => { if (b) p.thumb = URL.createObjectURL(b); updateThumbImg(p); }, 'image/jpeg', 0.8);
+      } catch(e){}
+      v.onseeked = () => { if (!playing && !exporting) refreshPreviewSoon(); };
+      p.el = v; done(true);
+    };
+    v.onerror = () => {
+      if (!settled){ markBadVideo(p, v); done(false); }       // rien n'a jamais pu être décodé
+      else recoverVideo(p, v);                               // erreur en cours de route
+    };
+    v.src = p.url;
+  });
+}
+const MEDIA_ERR = { 1:'lecture interrompue', 2:'erreur réseau', 3:'erreur de décodage', 4:'format non pris en charge' };
+function markBadVideo(p, v){
+  const e = v && v.error;
+  p.bad = true;
+  p.badReason = e ? `${MEDIA_ERR[e.code] || 'erreur ' + e.code}${e.message ? ' — ' + e.message : ''}` : 'erreur inconnue';
+  console.warn('vidéo illisible', p.name, p.badReason);
+  renderPhotoStrip(); updatePhotoInfo();
+}
+/* Un décodeur (surtout matériel, vidéos HDR) peut échouer ponctuellement : on
+   recrée le lecteur une fois avant de déclarer la vidéo illisible. */
+function recoverVideo(p, v){
+  if (p.el !== v) return;                                    // lecteur déjà remplacé ou libéré
+  v.onerror = null;
+  if (p.retried){ markBadVideo(p, v); return; }
+  console.warn('vidéo : erreur de lecture, nouvelle tentative', p.name, v.error && v.error.message);
+  p.retried = true; p.el = null;
+  probeVideo(p).then(ok => { if (!ok) markBadVideo(p, null); else if (!playing && !exporting) refreshPreviewSoon(); });
+}
+/* Affiche la vignette dès qu'elle existe (l'image d'attente est invisible). */
+function updateThumbImg(p){
+  const th = document.querySelector(`.ph[data-key="${CSS.escape(p.key)}"] .th`);
+  const img = th && th.querySelector('img');
+  if (img && p.thumb){ img.src = p.thumb; img.style.opacity = ''; th.classList.remove('wait'); }
+}
+function pauseAllVideos(){ for (const t of tracks) for (const p of t.media) if (p.el && !p.el.paused) p.el.pause(); }
+function releaseMedia(list){
+  for (const p of list || []){
+    if (p.bmp) p.bmp.close();
+    // on débranche les écouteurs AVANT de vider la source : vider la source émet
+    // une erreur qui, sinon, marquait à tort la vidéo « illisible »
+    if (p.el){ p.el.onerror = p.el.onseeked = p.el.onloadedmetadata = null; p.el.pause(); p.el.removeAttribute('src'); p.el.load(); }
+    if (p.thumb && p.thumb.startsWith('blob:')) URL.revokeObjectURL(p.thumb);
+    if (p.url) URL.revokeObjectURL(p.url);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Dossiers de médias mémorisés.
+   Un fichier .json ne peut pas contenir de chemin (le navigateur ne les donne
+   jamais). Là où c'est possible (Chrome, Edge), le dossier choisi est donc
+   mémorisé par le navigateur lui-même (IndexedDB), rattaché à la trace par une
+   empreinte de son GPX : à la réouverture du projet, un clic suffit à tout
+   recharger. Avec un dossier racine, une seule autorisation couvre toutes les
+   traces. Ailleurs, on retombe sur le choix de dossier classique.
+--------------------------------------------------------------------------- */
+const HAS_FSA = 'showDirectoryPicker' in window;
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('gpxcine', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('dirs');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const run = (mode, fn) => open().then(db => new Promise(res => {
+    const tx = db.transaction('dirs', mode), q = fn(tx.objectStore('dirs'));
+    tx.oncomplete = () => res(q && q.result); tx.onerror = () => res(null);
+  })).catch(() => null);
+  return { get:k => run('readonly', s => s.get(k)), set:(k,v) => run('readwrite', s => s.put(v, k)), del:k => run('readwrite', s => s.delete(k)) };
+})();
+function trackKey(e){
+  if (!e.key){
+    let h = 2166136261;                                   // FNV-1a sur le contenu du GPX
+    for (let i = 0; i < e.gpxText.length; i++){ h ^= e.gpxText.charCodeAt(i); h = Math.imul(h, 16777619); }
+    e.key = e.gpxName + '|' + (h >>> 0).toString(36);
+  }
+  return e.key;
+}
+const rememberDir = (e, rec) => HAS_FSA ? idb.set(trackKey(e), rec) : null;
+const forgetDir = e => HAS_FSA ? idb.del(trackKey(e)) : null;
+
+async function filesFromHandle(dir){
+  const out = [];
+  for await (const [name, h] of dir.entries()){
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'file'){ if (MEDIA_RE.test(name)) out.push(await h.getFile()); }
+    else out.push(...await filesFromHandle(h));
+  }
+  return out;
+}
+
+/* Un dossier appartient à une trace s'il porte son nom (20260816 ↔ 20260816.gpx)
+   ou sa date AAAAMMJJ. Pas de rapprochement approximatif : mieux vaut ne rien
+   charger que charger les photos d'un autre jour. */
+const plainName = s => String(s || '').replace(/\.[^.\/]+$/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const dateKey = s => { const m = String(s || '').match(/(20\d\d)[-_.]?(\d\d)[-_.]?(\d\d)/); return m ? m[1]+m[2]+m[3] : null; };
+function trackMatchesName(t, name){
+  const b = plainName(name);
+  if (b && b === plainName(t.gpxName)) return true;
+  const dk = dateKey(name);
+  return !!dk && (dk === dateKey(t.gpxName) || dk === dateKey(t.title));
+}
+
+/* ---------------------------------------------------------------------------
+   Projet = dossier.
+   « Ouvrir » demande le dossier du projet : ce choix donne accès à tout son
+   contenu, ce qui permet de retrouver seul le fichier .gpxcine.json (le plus
+   récent) puis les dossiers de photos/vidéos de chaque trace — celui noté dans
+   le projet (chemin relatif), sinon le sous-dossier qui porte le nom ou la
+   date du GPX. « Enregistrer » écrit directement dans ce dossier.
+   Sans cette possibilité (Safari, Firefox) : ouverture d'un fichier .json,
+   enregistrement par téléchargement, dossiers de médias à rechoisir.
+--------------------------------------------------------------------------- */
+let projectDir = null, projectFileHandle = null, projectFilePath = '';
+
+async function findFiles(dir, re, depth, path = []){
+  const out = [];
+  for await (const [name, h] of dir.entries()){
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'file'){ if (re.test(name)) out.push({ h, path:[...path, name] }); }
+    else if (depth > 0) out.push(...await findFiles(h, re, depth-1, [...path, name]));
+  }
+  return out;
+}
+async function listDirs(dir, depth, path = []){
+  const out = [];
+  for await (const [name, h] of dir.entries()){
+    if (name.startsWith('.') || h.kind !== 'directory') continue;
+    out.push({ h, path:[...path, name] });
+    if (depth > 0) out.push(...await listDirs(h, depth-1, [...path, name]));
+  }
+  return out;
+}
+async function dirAtPath(root, rel){
+  let d = root;
+  for (const part of String(rel).split('/').filter(p => p && p !== '.')) d = await d.getDirectoryHandle(part);
+  return d;
+}
+function updateProjectInfo(){
+  const el = $('#projectInfo');
+  if (projectDir){
+    el.textContent = `📁 ${projectDir.name}` + (projectFilePath ? ` › ${projectFilePath}` : ' · pas encore enregistré');
+    el.title = el.textContent;
+  } else el.textContent = tracks.length ? 'Projet non enregistré' : 'Aucun projet ouvert';
+}
+
+/* Remplace la trace d'une fiche par une nouvelle version du GPX, sans perdre le
+   travail fait dessus : points de passage replacés d'après leur position (départ
+   et arrivée suivent les extrémités), titres et réglages gardés ; sous-titre et
+   durée recalculés seulement s'ils étaient restés à leur valeur par défaut. */
+function refreshTrackFromGpx(e, text){
+  const g = parseGPX(text), tk = buildTrack(g.points), old = e.track;
+  const defSub = defaultSubtitle(old), defDur = defaultDur(old);
+  e.gpxText = text; e.g = g; e.track = tk; e.key = null;
+  for (const w of e.waypoints){
+    if (w.kind === 'start' || w.kind === 'end'){
+      const d = w.kind === 'start' ? 0 : tk.total, s = stateAt(tk, d);
+      w.d = d; w.lat = s.lat; w.lon = s.lon;
+    } else {
+      const s = snapToTrack(w.lon, w.lat, tk);
+      w.d = s.d;
+      if (!s.far){ w.lat = s.lat; w.lon = s.lon; }        // un point éloigné garde sa position
+    }
+  }
+  e.waypoints.sort((a, b) => a.d - b.d);
+  if (e.subtitle === defSub) e.subtitle = defaultSubtitle(tk);
+  if (+e.dur === defDur) e.dur = defaultDur(tk);
+}
+/* GPX présents dans le dossier du projet : ils font foi sur la copie embarquée. */
+async function syncGpxFromDir(dir){
+  const found = new Map();
+  for (const g of await findFiles(dir, /\.gpx$/i, 2)){
+    const f = await g.h.getFile(), k = f.name.toLowerCase();
+    if (!found.has(k) || found.get(k).lastModified < f.lastModified) found.set(k, f);   // le plus récent
+  }
+  const updated = [], added = [], failed = [];
+  for (const t of tracks){
+    const f = found.get(t.gpxName.toLowerCase());
+    if (!f) continue;
+    found.delete(t.gpxName.toLowerCase());
+    const text = await f.text();
+    if (text === t.gpxText) continue;
+    try { refreshTrackFromGpx(t, text); updated.push(t); } catch(err){ failed.push(`${f.name} : ${err.message}`); }
+  }
+  for (const f of found.values()){
+    try { tracks.push(buildEntry(await f.text(), f.name)); added.push(f.name); } catch(err){ failed.push(`${f.name} : ${err.message}`); }
+  }
+  if ((updated.length || added.length) && activeEntry()) activate(activeId);    // tout recalculer
+  else if (added.length && tracks.length) activate(tracks[0].id);
+  renderTrackList();
+  return { updated, added, failed };
+}
+
+/* Recharge les médias de chaque trace qui n'en a pas encore. */
+async function autoLoadMedia(){
+  if (!projectDir) return { tracks:0, files:0 };
+  const dirs = await listDirs(projectDir, 3);
+  let n = 0, files = 0;
+  for (const t of tracks){
+    if (t.media.length) continue;
+    let h = null, rel = '';
+    if (t.mediaFolder && t.mediaFolder !== '.'){
+      try { h = await dirAtPath(projectDir, t.mediaFolder); rel = t.mediaFolder; } catch(e){}
+    }
+    if (!h){
+      const c = dirs.find(d => trackMatchesName(t, d.h.name));
+      if (c){ h = c.h; rel = c.path.join('/'); }
+    }
+    if (!h && HAS_FSA){                    // dossier choisi hors du projet, si l'accès est déjà acquis
+      const rec = await idb.get(trackKey(t));
+      if (rec && rec.handle && await rec.handle.queryPermission({ mode:'read' }) === 'granted'){ h = rec.handle; rel = t.mediaFolder || h.name; }
+    }
+    if (!h) continue;
+    $('#projectInfo').textContent = `Chargement des médias de « ${t.title || t.gpxName} »…`;
+    const fs = await filesFromHandle(h);
+    if (!fs.length) continue;
+    await loadPhotos(fs, t, true);
+    t.mediaDir = h; t.mediaFolder = rel;
+    n++; files += fs.length;
+  }
+  updateProjectInfo(); updatePhotoInfo(); renderPhotoStrip(); renderTrackList();
+  return { tracks:n, files };
+}
+
+async function openProjectDir(dir){
+  $('#projectInfo').textContent = `Lecture de « ${dir.name} »…`;
+  const projs = await findFiles(dir, /\.gpxcine\.json$/i, 2);
+  if (projs.length){
+    for (const p of projs) p.file = await p.h.getFile();
+    projs.sort((a, b) => b.file.lastModified - a.file.lastModified);   // le plus récent
+    let data;
+    try { data = JSON.parse(await projs[0].file.text()); }
+    catch(e){ toast('Projet illisible : ' + e.message, true); updateProjectInfo(); return; }
+    openProject(data, true);
+    projectDir = dir; projectFileHandle = projs[0].h; projectFilePath = projs[0].path.join('/');
+  } else {
+    // pas encore de projet ici : on reprend les GPX du dossier
+    const gpx = await findFiles(dir, /\.gpx$/i, 2);
+    if (!gpx.length){ toast('Ce dossier ne contient ni projet (.gpxcine.json) ni trace GPX.', true); updateProjectInfo(); return; }
+    tracks.forEach(t => releaseMedia(t.media)); tracks = []; clearActive();
+    await loadFiles(await Promise.all(gpx.map(g => g.h.getFile())), dir.name);
+    projectDir = dir; projectFileHandle = null; projectFilePath = '';
+  }
+  projectBase = dir.name;
+  const sync = projs.length ? await syncGpxFromDir(dir) : { updated:[], added:[], failed:[] };
+  const r = await autoLoadMedia();
+  const missing = tracks.filter(t => t.expectedMedia && !t.media.length).length;
+  toast(`Projet « ${dir.name} » ouvert · ${tracks.length} trace(s)` +
+        (sync.updated.length ? ` · GPX mis à jour : ${sync.updated.map(t => t.gpxName).join(', ')}` : '') +
+        (sync.added.length ? ` · nouveau(x) GPX : ${sync.added.join(', ')}` : '') +
+        (r.files ? ` · ${r.files} photo(s)/vidéo(s) rechargée(s) pour ${r.tracks} trace(s)` : '') +
+        (missing ? ` · ⚠ dossier introuvable pour ${missing} trace(s)` : '') +
+        (sync.failed.length ? ` · GPX illisible : ${sync.failed[0]}` : ''), !!(missing || sync.failed.length));
+  if (sync.updated.length || sync.added.length) $('#projectInfo').textContent += ' · modifié, pensez à enregistrer';
+}
+async function openProjectFlow(){
+  if (exporting) return;
+  if (!HAS_FSA){ $('#projectFile').click(); return; }
+  let dir;
+  try { dir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite' }); }
+  catch(e){ if (e.name !== 'AbortError') toast('Dossier inaccessible : ' + e.message, true); return; }
+  await openProjectDir(dir);
+}
+
+/* Chemins des dossiers de médias, relatifs au dossier du projet. */
+async function refreshMediaPaths(){
+  if (!projectDir) return;
+  for (const t of tracks){
+    if (!t.mediaDir) continue;
+    const rel = await projectDir.resolve(t.mediaDir);
+    t.mediaFolder = rel ? (rel.join('/') || '.') : t.mediaDir.name;
+  }
+}
+async function saveProjectFlow(){
+  if (!tracks.length){ toast('Chargez d’abord une trace GPX.', true); return; }
+  if (!HAS_FSA){ download(new Blob([JSON.stringify(buildProjectData(), null, 1)], {type:'application/json'}), `${projectSlug()}.gpxcine.json`); toast('Projet téléchargé ✔'); return; }
+  if (!projectDir){
+    try { projectDir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite' }); }
+    catch(e){ if (e.name !== 'AbortError') toast('Dossier inaccessible : ' + e.message, true); return; }
+    projectBase = projectDir.name; projectFileHandle = null;
+  }
+  let perm = await projectDir.queryPermission({ mode:'readwrite' });
+  if (perm !== 'granted') perm = await projectDir.requestPermission({ mode:'readwrite' });
+  if (perm !== 'granted'){ toast('Écriture refusée dans le dossier du projet.', true); return; }
+  await refreshMediaPaths();
+  if (!projectFileHandle){
+    projectFilePath = `${projectSlug()}.gpxcine.json`;
+    projectFileHandle = await projectDir.getFileHandle(projectFilePath, { create:true });
+  }
+  const w = await projectFileHandle.createWritable();
+  await w.write(JSON.stringify(buildProjectData(), null, 1));
+  await w.close();
+  updateProjectInfo();
+  toast(`Projet enregistré ✔ ${projectDir.name}/${projectFilePath}`);
+}
+/* Médias d'une seule trace. */
+async function pickTrackFolder(){
+  const e = activeEntry();
+  if (!e){ toast('Sélectionnez d’abord une trace.', true); return; }
+  if (!HAS_FSA){ $('#photoDirInput').click(); return; }
+  let dir;
+  try { dir = await showDirectoryPicker({ id:'gpxcine-media', mode:'read', startIn: projectDir || 'pictures' }); }
+  catch(err){ if (err.name !== 'AbortError') toast('Dossier inaccessible : ' + err.message, true); return; }
+  await loadPhotos(await filesFromHandle(dir), e);
+  e.mediaDir = dir; e.mediaFolder = dir.name;
+  if (projectDir && !(await projectDir.resolve(dir))){
+    await rememberDir(e, { handle:dir, mode:'dir' });
+    toast(`« ${dir.name} » n’est pas dans le dossier du projet : il sera rechargé automatiquement tant que le navigateur garde l’autorisation. Pour être tranquille, placez-le dans « ${projectDir.name} ».`, true);
+  }
+}
+
+/* Réglages mémorisés d'un fichier (position placée à la main, choix vidéo,
+   passage). Clé exacte d'abord ; si le fichier a été retouché (autre taille ou
+   date), on les retrouve par son nom, dans le projet puis dans le navigateur. */
+function metaFor(memo, owner, key, name){
+  const saved = owner.savedMedia || [];
+  return memo[key] || saved.find(m => m.key === key) || saved.find(m => m.name === name)
+      || (Object.entries(memo).filter(([k]) => k.startsWith(name + '|')).pop() || [])[1] || null;
+}
+
+/* Charge photos et vidéos dans la trace active. */
+async function loadPhotos(files, owner, quiet){
+  owner = owner || activeEntry();
+  if (!owner){ toast('Sélectionnez d’abord une trace : les photos et vidéos sont rangées par trace.', true); return; }
+  files = [...files].filter(f => MEDIA_RE.test(f.name))
                     .sort((a,b) => a.name.localeCompare(b.name, 'fr', {numeric:true}));
-  if (!files.length){ toast('Aucune photo (jpg, png, webp, heic) dans cette sélection.', true); return; }
+  if (!files.length){ if (!quiet) toast('Aucune photo ni vidéo (jpg, png, webp, heic, mp4, mov) dans cette sélection.', true); return; }
   if (!window.exifr){
     // version complète : la version « lite » ne lit que JPEG et HEIC, pas le PNG
     try { await loadScript('https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js'); }
@@ -2558,13 +3153,27 @@ async function loadPhotos(files){
   }
   const memo = readPhotoMemo();
   let added = 0, unreadable = 0;
-  setPhotoInfo(`Lecture de ${files.length} photo(s)…`);
+  const list = owner.media;
+  setPhotoInfo(`Lecture de ${files.length} fichier(s)…`);
   for (const f of files){
     const key = photoKey(f);
-    if (photos.some(p => p.key === key)) continue;
-    const p = { key, file:f, name:f.name, lat:null, lon:null, exifGeo:false, exifLat:null, exifLon:null, manual:false, date:null,
-                wall:null, tzMin:null, gpsUtc:null, proposal:null,
-                include:null, thumb:null, bmp:null, bad:false, caption:null };
+    if (list.some(p => p.key === key)) continue;
+    const kind = VIDEO_RE.test(f.name) ? 'video' : 'photo';
+    const p = { key, kind, file:f, name:f.name, lat:null, lon:null, exifGeo:false, exifLat:null, exifLon:null, manual:false, date:null,
+                wall:null, tzMin:null, gpsUtc:null, utc:null, proposal:null,
+                include:null, thumb:null, bmp:null, el:null, url:null, duration:0, bad:false, caption:null };
+    if (kind === 'video'){
+      try {
+        const m = await readVideoMeta(f);
+        if (m.lat != null){ p.lat = p.exifLat = m.lat; p.lon = p.exifLon = m.lon; p.exifGeo = true; }
+        p.wall = m.wall; p.tzMin = m.tzMin; p.utc = m.utc;
+        if (m.wall != null){ const w = new Date(m.wall); p.date = new Date(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate(), w.getUTCHours(), w.getUTCMinutes(), w.getUTCSeconds()); }
+        else if (m.utc != null) p.date = new Date(m.utc);
+      } catch(e){ unreadable++; console.warn('métadonnées vidéo illisibles', f.name, e.message); }
+      applyPhotoMeta(p, metaFor(memo, owner, key, f.name));
+      list.push(p); added++;
+      continue;
+    }
     if (window.exifr){
       try {
         const x = await exifr.parse(f, { gps:true, exif:true, tiff:true, xmp:false, icc:false, iptc:false, jfif:false, ihdr:false });
@@ -2583,17 +3192,21 @@ async function loadPhotos(files){
         p.gpsUtc = gpsUtcOf(x);
       } catch(e){ unreadable++; console.warn('EXIF illisible', f.name, e.message); }
     }
-    applyPhotoMeta(p, memo[key]);
-    photos.push(p); added++;
+    applyPhotoMeta(p, metaFor(memo, owner, key, f.name));
+    list.push(p); added++;
   }
-  refreshPhotos();
-  makeThumbs();
-  const geo = photos.filter(p => p.lat != null).length;
-  const both = photos.filter(p => p.manual && p.exifGeo).length;
-  toast(added ? `${added} photo(s) ajoutée(s) · ${geo} géolocalisée(s)` +
+  owner.expectedMedia = 0;
+  // les vidéos ont besoin de leur durée avant le calcul de la chronologie
+  for (const p of list) if (p.kind === 'video' && !p.el && !p.bad){ setPhotoInfo(`Préparation de ${p.name}…`); await probeVideo(p); }
+  if (owner === activeEntry()){ refreshPhotos(); makeThumbs(); }
+  renderTrackList();
+  if (quiet) return { added, unreadable };
+  const geo = list.filter(p => p.lat != null).length, nv = list.filter(p => p.kind === 'video').length;
+  const both = list.filter(p => p.manual && p.exifGeo).length;
+  toast(added ? `${added} média(s) ajouté(s) à « ${owner.title || owner.gpxName} » · ${nv ? nv + ' vidéo(s) · ' : ''}${geo} géolocalisé(s)` +
                 (unreadable ? ` · métadonnées illisibles pour ${unreadable}` : '') +
-                (both ? ` · ${both} placée(s) à la main alors qu’elles ont un GPS` : '')
-              : 'Ces photos sont déjà chargées.', unreadable > 0);
+                (both ? ` · ${both} placé(s) à la main alors qu’ils ont un GPS` : '')
+              : 'Ces fichiers sont déjà chargés pour cette trace.', unreadable > 0);
 }
 /* ---------------------------------------------------------------------------
    Placement par l'heure (propositions à valider).
@@ -2629,15 +3242,23 @@ function proposePhotoPositions(){
   const cands = photos.filter(p => p.lat == null && !p.bad);
   if (!cands.length){ toast('Toutes les photos ont déjà une position.'); return; }
   const off = cameraOffset();
+  // heure absolue (UTC) si on peut la connaître, sinon heure de l'appareil :
+  // pour interpoler, il suffit que tous les médias partagent la même horloge
+  const times = p => {
+    const utc = p.utc != null ? p.utc : p.wall == null ? null
+              : p.tzMin != null ? p.wall - p.tzMin*60e3 : off ? p.wall - off.ms : null;
+    return { utc, rel: utc != null ? utc : p.wall };
+  };
   const anchors = !track ? [] : photos
-    .filter(p => p.lat != null && p.wall != null && photoLink(p) && photoLink(p).near)
-    .map(p => ({ t:p.wall, d:photoLink(p).d })).sort((a,b) => a.t - b.t);
+    .filter(p => p.lat != null && times(p).rel != null && photoLink(p) && photoLink(p).near)
+    .map(p => ({ t:times(p).rel, d:photoLink(p).d })).sort((a,b) => a.t - b.t);
   let byGpx = 0, byPhotos = 0, extrap = 0, noDate = 0, none = 0;
   for (const p of cands){
     p.proposal = null;
-    if (p.wall == null){ noDate++; continue; }
+    const tm = times(p);
+    if (tm.rel == null){ noDate++; continue; }
     // 1. une trace horodatée couvre l'heure de la photo
-    const utc = p.tzMin != null ? p.wall - p.tzMin*60e3 : off ? p.wall - off.ms : null;
+    const utc = tm.utc;
     if (utc != null){
       const order = [activeEntry(), ...tracks.filter(t => t.id !== activeId)].filter(Boolean);
       const hit = order.find(t => t.track.timed && utc >= t.track.t0 - 300e3 && utc <= t.track.t1 + 300e3);
@@ -2645,13 +3266,13 @@ function proposePhotoPositions(){
         const s = stateAt(hit.track, distAtTime(hit.track, clamp(utc, hit.track.t0, hit.track.t1)));
         p.proposal = { lat:s.lat, lon:s.lon, method:'gpx',
           detail:`d’après l’heure du GPX « ${hit.title || hit.gpxName} »` +
-                 (p.tzMin != null ? ' (fuseau EXIF)' : ` (décalage ${fmtOffset(off.ms)}, ${off.how})`) };
+                 (p.utc != null || p.tzMin != null ? ' (fuseau du fichier)' : ` (décalage ${fmtOffset(off.ms)}, ${off.how})`) };
         byGpx++; continue;
       }
     }
     // 2. entre les photos repères de la trace active
     if (anchors.length >= 2){
-      const t = p.wall, i = anchors.findIndex(a => a.t >= t);
+      const t = tm.rel, i = anchors.findIndex(a => a.t >= t);
       let d, detail, method = 'photos';
       if (i > 0){
         const a = anchors[i-1], b = anchors[i];
@@ -2713,12 +3334,15 @@ function updateGpsButton(){
 }
 function updatePhotoInfo(){
   updateGpsButton();
-  if (!photos.length){ setPhotoInfo('Aucune photo. Les photos géolocalisées proches de la trace active apparaissent dans la vidéo, en haut à droite.'); return; }
+  const e = activeEntry();
+  if (!e){ setPhotoInfo('Chaque trace a ses propres photos et vidéos : sélectionnez une trace, puis chargez son dossier.'); return; }
+  if (!photos.length){ setPhotoInfo(`Aucun média pour « ${e.title || e.gpxName} ». Chargez le dossier de photos/vidéos de cette trace.`); return; }
   const geo = photos.filter(p => p.lat != null).length;
   const near = photos.filter(p => { const l = photoLink(p); return l && l.near; }).length;
   const inc = photoPlan.length;
-  setPhotoInfo(`${photos.length} photo(s) · ${geo} géolocalisée(s) · ${near} près de la trace active · ${inc} dans la vidéo` +
-               (warp && warp.extra ? ` (+${fmt(warp.extra,1)} s de ralenti)` : ''));
+  const nv = photos.filter(p => p.kind === 'video').length;
+  setPhotoInfo(`« ${e.title || e.gpxName} » : ${photos.length - nv} photo(s)${nv ? `, ${nv} vidéo(s)` : ''} · ${geo} géolocalisé(s) · ` +
+               `${near} près de la trace · ${inc} dans la vidéo` + (warp && warp.extra ? ` (+${fmt(warp.extra,1)} s d’arrêts)` : ''));
 }
 /* Tout ce qui dépend des photos : chronologie, caméra, bandeau, marqueurs. */
 function refreshPhotos(){
@@ -2737,11 +3361,16 @@ function placePhoto(p, lon, lat){
 
 /* ---- vignettes et images pour la vidéo ---- */
 let thumbsRunning = false;
+/* Vignettes, une à la fois (les PNG d'iPhone de 15 Mo sont longs à réduire).
+   On reprend toujours dans la liste de la trace active du moment : changer de
+   trace pendant la génération fait passer ses vignettes en priorité. */
 async function makeThumbs(){
   if (thumbsRunning) return; thumbsRunning = true;
   try {
-    for (const p of photos){
-      if (p.thumb || p.bad) continue;
+    for (;;){
+      const p = photos.find(x => !x.thumb && !x.bad && !x.thumbTried && x.kind !== 'video');
+      if (!p) break;
+      p.thumbTried = true;
       try {
         let url = null;
         try { url = window.exifr ? await exifr.thumbnailUrl(p.file) : null; } catch(e){}
@@ -2752,16 +3381,18 @@ async function makeThumbs(){
           url = await new Promise(r => c.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.8));
         }
         p.thumb = url;
-      } catch(e){ p.bad = true; }           // format non décodable par ce navigateur (HEIC hors Safari…)
-      const img = document.querySelector(`.ph[data-key="${CSS.escape(p.key)}"] img`);
-      if (img && p.thumb) img.src = p.thumb;
-      if (p.bad) refreshPhotos();
+        updateThumbImg(p);
+      } catch(e){                            // format non décodable par ce navigateur (HEIC hors Safari…)
+        p.bad = true; p.badReason = 'image non décodable par ce navigateur';
+        refreshPhotos();
+      }
     }
   } finally { thumbsRunning = false; }
 }
 /* Image destinée à la vidéo : décodée une fois, 1600 px au plus sur le grand côté. */
 const bmpPending = new Map();
 function photoBitmap(p){
+  if (p.kind === 'video') return probeVideo(p).then(() => null);
   if (p.bmp) return Promise.resolve(p.bmp);
   if (bmpPending.has(p)) return bmpPending.get(p);
   const job = (async () => {
@@ -2782,18 +3413,33 @@ function photoBitmap(p){
 }
 
 /* ---- bandeau de vignettes (onglet Carte & photos) ---- */
+let mediaFilter = 'all';
+const mediaFilters = {
+  all:      p => true,
+  geo:      p => p.lat != null,
+  unplaced: p => p.lat == null,            // y compris les propositions pas encore validées
+};
 function renderPhotoStrip(){
   const list = $('#photoList');
   if (!list) return;
+  const e = activeEntry();
+  $('#stripTitle').textContent = e ? (e.title || e.gpxName) : 'Médias';
+  $('#stripTitle').title = e ? e.gpxName : '';
   const near = photos.filter(p => { const l = photoLink(p); return l && l.near; }).length;
   $('#photoCount').textContent = photos.length ? `${near} / ${photos.length}` : '';
+  for (const b of $$('#photoStrip .filters button')){
+    b.classList.toggle('on', b.dataset.f === mediaFilter);
+    b.querySelector('b').textContent = photos.filter(mediaFilters[b.dataset.f]).length;
+  }
   if (!photos.length){
-    list.innerHTML = '<p class="hint" style="padding:8px">Aucune photo. Choisissez un dossier dans le panneau de gauche, section Photos.</p>';
+    list.innerHTML = e && e.expectedMedia
+      ? `<p class="hint" style="padding:8px">Le projet référence ${e.expectedMedia} média(s) pour cette trace${e.mediaFolder ? ' (dossier « ' + e.mediaFolder.replace(/[<>&]/g,'') + ' »)' : ''} : rechargez-le (📁 ou 🗂 dans le panneau de gauche).</p>`
+      : '<p class="hint" style="padding:8px">Aucun média pour cette trace. Chargez son dossier : 📁 dans le panneau de gauche, section Photos &amp; vidéos.</p>';
     return;
   }
   // d'abord les photos de la trace active dans l'ordre du parcours, puis hors trace, puis à placer
   const rank = p => { const l = photoLink(p); return !l ? 2e9 : l.near ? l.d : 1e9 + l.off; };
-  const sorted = [...photos].sort((a,b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const sorted = [...photos].filter(mediaFilters[mediaFilter]).sort((a,b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   list.innerHTML = '';
   const props = photos.filter(p => p.proposal);
   if (props.length){
@@ -2804,6 +3450,11 @@ function renderPhotoStrip(){
     bar.querySelector('.ko').onclick = () => rejectProposals(props);
     list.appendChild(bar);
   }
+  if (!sorted.length){
+    const msg = document.createElement('p'); msg.className = 'hint'; msg.style.padding = '8px';
+    msg.textContent = mediaFilter === 'geo' ? 'Aucun média géolocalisé.' : 'Tous les médias sont placés.';
+    list.appendChild(msg);
+  }
   for (const p of sorted){
     const l = photoLink(p);
     const el = document.createElement('div');
@@ -2812,10 +3463,11 @@ function renderPhotoStrip(){
     const icon = p.proposal ? '<span class="ic prop" title="Position proposée par l’heure, à valider"></span>'
                : p.lat == null ? '<span class="ic unk" title="Sans géolocalisation : cliquez pour la placer">?</span>'
                : `<span class="ic ${p.manual ? 'man' : 'geo'}" title="${p.manual ? 'Position placée à la main' : 'Position GPS de la photo'}"></span>`;
-    el.innerHTML = `<div class="th">${p.thumb ? `<img alt="">` : '<img alt="" style="opacity:0">'}${icon}</div>
+    const vid = p.kind === 'video' ? `<span class="vid">▶ ${p.duration ? mmss(p.duration) : ''}</span>` : '';
+    el.innerHTML = `<div class="th${p.thumb || p.bad ? '' : ' wait'}">${p.thumb ? `<img alt="">` : '<img alt="" style="opacity:0">'}${icon}${vid}</div>
       <div class="meta"><span class="nm"></span>
         <label><input type="checkbox"> vidéo</label>
-        <span class="km"></span>${p.proposal ? '<button class="pin ok" title="Valider la position proposée">✓</button><button class="pin ko" title="Rejeter la proposition">✗</button>' : ''}${p.manual && p.exifGeo ? '<button class="pin gps" title="Revenir à la position GPS de la photo">⌖</button>' : ''}<button class="pin" title="Placer / déplacer sur la carte">📍</button></div>`;
+        <span class="km"></span>${l && l.passes && l.passes.length > 1 && !p.proposal ? '<button class="pin swap" title="">⇄</button>' : ''}${p.proposal ? '<button class="pin ok" title="Valider la position proposée">✓</button><button class="pin ko" title="Rejeter la proposition">✗</button>' : ''}${p.manual && p.exifGeo ? '<button class="pin gps" title="Revenir à la position GPS de la photo">⌖</button>' : ''}<button class="pin" title="Placer / déplacer sur la carte">📍</button></div>`;
     if (p.thumb) el.querySelector('img').src = p.thumb;
     el.querySelector('.nm').textContent = p.name;
     el.querySelector('.nm').title = p.name + (p.date ? ' · ' + p.date.toLocaleString('fr-FR') : '');
@@ -2823,10 +3475,14 @@ function renderPhotoStrip(){
     el.querySelector('.km').textContent = p.bad ? 'illisible'
       : p.proposal ? (pl ? `proposée · km ${fmt(U.dist(pl.d).v,1)}` : 'proposée')
       : p.lat == null ? 'à placer'
-      : !l ? '' : l.near ? `km ${fmt(U.dist(l.d).v,1)}` : 'hors trace';
+      : !l ? '' : l.near ? `km ${fmt(U.dist(l.d).v,1)}`
+      : p.include === true ? `km ${fmt(U.dist(l.d).v,1)} · détour ${fmt(U.dist(l.off).v, l.off < 10000 ? 1 : 0)} ${U.dist(l.off).u}`
+      : `hors trace · ${fmt(U.dist(l.off).v, l.off < 10000 ? 1 : 0)} ${U.dist(l.off).u}`;
+    if (p.bad) el.querySelector('.km').title = 'Illisible par ce navigateur : ' + (p.badReason || 'format non décodé');
     const cb = el.querySelector('input');
     cb.checked = photoIncluded(p);
-    cb.disabled = !(l && l.near) || p.bad;
+    cb.disabled = !l || p.bad;
+    if (l && !l.near) cb.parentElement.title = `Hors trace : cochez pour l’inclure quand même, elle s’affichera au km ${fmt(U.dist(l.d).v,1)} (point de la trace le plus proche).`;
     cb.onchange = () => { p.include = cb.checked; writePhotoMemo([p]); refreshPhotos(); };
     el.querySelector('.th').onclick = () => {
       if (photoPos(p)) focusPhoto(p);
@@ -2834,6 +3490,19 @@ function renderPhotoStrip(){
     };
     el.querySelector('.pin:not(.gps)').onclick = () => setClickMode(clickMode && clickMode.photo === p ? null : { type:'photo', photo:p });
     const g = el.querySelector('.pin.gps'); if (g) g.onclick = () => useGps([p]);
+    const sw = el.querySelector('.pin.swap');
+    if (sw){
+      const others = l.passes.filter(x => Math.abs(x.d - l.d) > 1).map(x => 'km ' + fmt(U.dist(x.d).v, 1));
+      sw.title = `Trace parcourue plusieurs fois ici : passage retenu km ${fmt(U.dist(l.d).v,1)}` +
+                 (p.passD != null ? ' (choisi à la main)' : ' (d’après l’ordre des heures)') + ` — autre(s) : ${others.join(', ')}. Cliquer pour changer.`;
+      sw.onclick = () => {
+        const ps = [...l.passes].sort((a, b) => a.d - b.d);
+        const i = ps.findIndex(x => Math.abs(x.d - l.d) < 1);
+        p.passD = ps[(i + 1) % ps.length].d;
+        writePhotoMemo([p]); refreshPhotos();
+        toast(`« ${p.name} » : passage au km ${fmt(U.dist(p.passD).v, 1)}`);
+      };
+    }
     const ok = el.querySelector('.pin.ok'); if (ok) ok.onclick = () => acceptProposals([p]);
     const ko = el.querySelector('.pin.ko'); if (ko) ko.onclick = () => rejectProposals([p]);
     if (p.proposal) el.querySelector('.meta').title = p.proposal.detail;
@@ -2876,7 +3545,7 @@ function refreshPhotoMarkers(){
     if (!pos) continue;
     const l = photoLink(p);
     const el = document.createElement('div');
-    el.className = 'photo-marker' + (p.proposal ? ' prop' : p.manual ? ' man' : '') + (p.proposal || (l && l.near) ? '' : ' out');
+    el.className = 'photo-marker' + (p.proposal ? ' prop' : p.manual ? ' man' : '') + (p.proposal || (l && l.near) ? '' : ' out') + (p.kind === 'video' ? ' vid' : '');
     el.title = p.name + (p.proposal ? ' (proposée)' : '');
     el.addEventListener('click', ev => { ev.stopPropagation(); showPhotoPopup(p); flashPhoto(p); });
     photoMarkers.push(new maplibregl.Marker({ element:el }).setLngLat([pos.lon, pos.lat]).addTo(map));
@@ -2950,7 +3619,7 @@ async function exportVideo(){
     }
     if (photoPlan.length){
       for (let i=0; i<photoPlan.length && !cancelFlag; i++){
-        setExportUI(true, i/photoPlan.length*100, `Préparation des photos · ${i+1} / ${photoPlan.length}`);
+        setExportUI(true, i/photoPlan.length*100, `Préparation des photos et vidéos · ${i+1} / ${photoPlan.length}`);
         await photoBitmap(photoPlan[i].photo);
       }
       if (cancelFlag){ toast('Export annulé.'); return; }
@@ -2989,6 +3658,7 @@ async function exportVideo(){
       await uiYield();
     }
     if (encError) throw encError;
+    pauseAllVideos();
     if (cancelFlag){ encoder.close(); toast('Export annulé.'); return; }
 
     setExportUI(true, 100, 'Finalisation du fichier MP4…');
@@ -3118,7 +3788,7 @@ function syncLabels(){
   $('#exagV').textContent   = (+$('#exag').value).toFixed(1)+'×';
 }
 const PERSIST = ['title','subtitle','accent','units','showProfile','showCompass','showMinimap','trackWidth','prefetchExport',
-                 'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','basemap','terrain','exag',
+                 'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','clipMax','basemap','terrain','exag',
                  'zoom','pitch','anchor','ahead','smooth','inertia','maxrot','freedom',
                  'dur','intro','outro','pace','fps','bitrate'];
 function saveSettings(){
@@ -3137,17 +3807,12 @@ function restoreSettings(){
 
 /* ---- fichier ---- */
 $('#file').addEventListener('change', e=>{ if (e.target.files.length) loadFiles(e.target.files); e.target.value=''; });
-$('#openDir').onclick = ()=> $('#dirInput').click();
-$('#dirInput').addEventListener('change', e=>{
-  const files = [...e.target.files];
-  const dir = files[0] && files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : null;
-  if (files.length) loadFiles(files, dir);
-  e.target.value='';
-});
 $('#clearTracks').onclick = ()=>{
   if (!tracks.length || exporting) return;
   if (tracks.length > 1 && !confirm(`Retirer les ${tracks.length} traces de la liste ?`)) return;
-  tracks = []; projectBase = null; clearActive();
+  tracks.forEach(t => releaseMedia(t.media));
+  tracks = []; projectBase = null; projectDir = null; projectFileHandle = null; projectFilePath = '';
+  clearActive(); updateProjectInfo();
 };
 ['dragenter','dragover'].forEach(ev=>document.addEventListener(ev, e=>{
   e.preventDefault(); $('#drop').classList.add('hot');
@@ -3157,12 +3822,18 @@ $('#clearTracks').onclick = ()=>{
 }));
 document.addEventListener('drop', e=>{
   if (!e.dataTransfer) return;
+  // un seul dossier déposé : c'est un projet, ouvert comme avec « 📂 Ouvrir »
+  const items = [...(e.dataTransfer.items || [])];
+  if (HAS_FSA && items.length === 1 && items[0].getAsFileSystemHandle && items[0].webkitGetAsEntry && items[0].webkitGetAsEntry()?.isDirectory){
+    items[0].getAsFileSystemHandle().then(h => h && h.kind === 'directory' && openProjectDir(h));
+    return;
+  }
   const entries = entriesFromDrop(e.dataTransfer);          // à lire tout de suite
   const plain = [...(e.dataTransfer.files || [])];
   (async ()=>{
     const { files, dirName } = entries.length ? await filesFromEntries(entries) : { files:plain, dirName:null };
-    if (files.some(f=>/\.(gpx|json|jpe?g|png|webp|heic|heif)$/i.test(f.name))) loadFiles(files, dirName);
-    else if (files.length) toast('Déposez des fichiers .gpx, des photos, un dossier ou un projet .json', true);
+    if (files.some(f => /\.(gpx|json)$/i.test(f.name) || MEDIA_RE.test(f.name))) loadFiles(files, dirName);
+    else if (files.length) toast('Déposez des fichiers .gpx, des photos/vidéos, un dossier ou un projet .json', true);
   })();
 });
 
@@ -3170,10 +3841,10 @@ document.addEventListener('drop', e=>{
 const onChange = (ids, fn) => ids.forEach(id => $('#'+id).addEventListener('input', ()=>{
   syncLabels(); fn && fn(); saveSettings(); if (!exporting) renderPreview();
 }));
-onChange(['title','subtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
+onChange(['title','subtitle','endSubtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
 onChange(['showProfile','showCompass','showMinimap','prefetchExport']);
 onChange(['trackWidth'], applyTrackWidth);
-onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle'], refreshPhotos);
+onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','clipMax'], refreshPhotos);
 onChange(['photoClock']);
 onChange(['accent'], ()=>{ refreshAccent(); renderWpList(); if (editing) refreshMarkers(); });
 onChange(['pitch','anchor']);
@@ -3206,14 +3877,24 @@ $('#editWp').onclick = ()=>{
 $$('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && clickMode) setClickMode(null); });
 /* ---- photos ---- */
-$('#openPhotos').onclick = () => $('#photoDirInput').click();
+$('#openPhotos').onclick = pickTrackFolder;
 $('#photoUseGps').onclick = () => useGps(photos.filter(p => p.manual));
+$$('#photoStrip .filters button').forEach(b => b.onclick = () => { mediaFilter = b.dataset.f; renderPhotoStrip(); });
 $('#photoByTime').onclick = () => { if (!photos.length) toast('Chargez d’abord un dossier de photos.', true); else proposePhotoPositions(); };
-$('#photoDirInput').addEventListener('change', e => { if (e.target.files.length) loadPhotos(e.target.files); e.target.value = ''; });
+$('#photoDirInput').addEventListener('change', e => {
+  const files = [...e.target.files]; e.target.value = '';
+  if (!files.length) return;
+  const a = activeEntry(), rel = files[0].webkitRelativePath;
+  loadPhotos(files).then(() => { if (a && rel) a.mediaFolder = rel.split('/')[0]; });
+});
 $('#clearPhotos').onclick = () => {
-  if (!photos.length || exporting) return;
-  photos.forEach(p => { if (p.bmp) p.bmp.close(); if (p.thumb && p.thumb.startsWith('blob:')) URL.revokeObjectURL(p.thumb); });
-  photos = []; refreshPhotos(); toast('Photos retirées (les positions placées à la main restent mémorisées).');
+  const e = activeEntry();
+  if (!e || !e.media.length || exporting) return;
+  releaseMedia(e.media);
+  e.media = []; photos = e.media; e.savedMedia = []; e.expectedMedia = 0; e.mediaFolder = '';
+  forgetDir(e);
+  refreshPhotos(); renderTrackList();
+  toast('Médias de la trace retirés (les positions placées à la main restent mémorisées).');
 };
 $('#addHere').onclick = ()=>{
   if (!track) { toast('Chargez d’abord une trace GPX.', true); return; }
@@ -3229,11 +3910,14 @@ $('#startName').addEventListener('input', ()=> syncEndpoint('start'));
 $('#endName').addEventListener('input',  ()=> syncEndpoint('end'));
 
 /* ---- projet ---- */
-$('#saveProject').onclick = saveProject;
-$('#openProject').onclick = ()=> $('#projectFile').click();
+$('#saveProject').onclick = saveProjectFlow;
+$('#openProject').onclick = openProjectFlow;
 $('#projectFile').addEventListener('change', e=>{
-  if (e.target.files[0]) loadFiles([e.target.files[0]]);
+  if (e.target.files.length) loadFiles(e.target.files);
   e.target.value='';
+});
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveProjectFlow(); }
 });
 
 /* ---- export ---- */

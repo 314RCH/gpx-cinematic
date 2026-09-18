@@ -33,7 +33,7 @@ Testé sur Chrome / Edge / Brave et Safari 17+ (l'export MP4 utilise WebCodecs).
 |---|---|
 | Intro | Vue globale de la trace, nord en haut, puis zoom vers le point de départ |
 | Parcours | Caméra inclinée qui suit le point courant et vise en avant, trace persistante |
-| Final | Dézoom vers la vue globale nord en haut + carte de fin (distance, D+, durée) |
+| Final | Dézoom vers la vue globale nord en haut + carte de fin : titre, **sous-titre de fin** (champ libre, propre à chaque trace, rien s'il est vide), puis distance, D+, durée |
 
 ## Plusieurs traces
 
@@ -57,12 +57,46 @@ Les traces apparaissent dans une liste ; un clic rend une trace **active**.
   à droite, un bandeau vertical des vignettes. « 🖈 Placer sur la carte »
   ouvre cet onglet en mode ajout de points.
 
-## Photos
+## Photos et vidéos
 
-**📷 Dossier de photos** (section Photos) charge les images d'un dossier
-(jpg, png, webp ; heic seulement sous Safari). On peut aussi les glisser-déposer.
-La position et la date de prise de vue sont lues dans l'EXIF, y compris dans
-le bloc `eXIf` des PNG (captures et exports d'iPhone, par exemple).
+**Les médias sont rangés par trace.** Sélectionnez une trace, puis
+**📁 Dossier de la trace active** (section Photos & vidéos) : son contenu est
+rattaché à cette trace uniquement. La liste des traces indique ce que chacune
+contient (📷 photos, 🎬 vidéos) ; l'onglet Carte & photos et la vidéo
+n'utilisent que les médias de la trace active. Une organisation simple : un
+sous-dossier par jour ou par GPX.
+
+- **Photos** : jpg, png, webp (heic seulement sous Safari). Position et date
+  lues dans l'EXIF, y compris le bloc `eXIf` des PNG (exports d'iPhone).
+- **Vidéos** : mp4, mov, m4v, webm (HEVC d'iPhone compris sous Chrome/Safari
+  macOS). Position et date lues dans les métadonnées QuickTime
+  (`com.apple.quicktime.location.ISO6709` ou `©xyz`, date avec fuseau), en ne
+  lisant que l'en-tête du fichier. Dans la vidéo, le clip est joué pendant
+  l'arrêt du point, plafonné par **Vidéo max. (s)** (12 s par défaut). À
+  l'export, chaque image est calée exactement sur l'instant du clip. Le son
+  n'est pas repris.
+
+### Ajouter des médias à une trace
+
+Sélectionnez la trace, puis **📁 Dossier de la trace active**. À l'ouverture
+d'un projet, les dossiers sont retrouvés automatiquement (voir « Projet »).
+
+**Vidéo « illisible »** : le survol de la mention donne la raison exacte. Une
+erreur de lecture passagère (fréquente avec les vidéos HDR d'iPhone) est
+retentée une fois automatiquement. Si le navigateur ne sait vraiment pas la
+décoder, convertissez-la en H.264 avec l'outil de macOS, puis recopiez sa
+position et sa date :
+
+```bash
+avconvert --preset Preset1920x1080 --source IMG.mov --output IMG.mp4
+```
+
+```bash
+exiftool -overwrite_original -TagsFromFile IMG.mov -Keys:GPSCoordinates -Keys:CreationDate IMG.mp4
+```
+
+Le bandeau de l'onglet Carte & photos a trois filtres : **Tous**,
+**Géolocalisés**, **Non placés** (avec les compteurs).
 
 - **Sphère bleue** : photo géolocalisée par son GPS. **Sphère orange** :
   position placée à la main. **« ? »** : pas de position. Un clic sur la
@@ -72,9 +106,20 @@ le bloc `eXIf` des PNG (captures et exports d'iPhone, par exemple).
   qui a les deux, **⌖** (sur la vignette) revient au GPS, et le bouton
   **⌖ Rétablir les positions GPS** le fait pour toutes.
 - Les positions placées à la main et les choix d'inclusion sont mémorisés
-  dans le navigateur **et** dans le projet `.json` (clé : nom, taille et date
-  du fichier), et reviennent quand on rouvre le même dossier. Les fichiers
-  photo eux-mêmes ne sont jamais modifiés.
+  dans le navigateur **et** dans le projet `.json`, trace par trace (clé : nom,
+  taille et date du fichier), et reviennent quand on rouvre le même dossier.
+  Un fichier retouché ou réexporté (autre date) les retrouve par son nom.
+  Un projet rouvert signale par ⚠ les traces dont il faut recharger le
+  dossier. Les fichiers eux-mêmes ne sont jamais modifiés.
+- **Aller-retour, boucles** : quand la trace repasse au même endroit, une
+  photo est près de plusieurs passages. Le passage retenu est celui qui
+  respecte l'ordre chronologique des prises de vue (une photo plus tardive est
+  plus loin sur la trace), même si le GPX n'est pas horodaté. Le bouton **⇄**
+  de la vignette bascule vers l'autre passage ; ce choix est mémorisé.
+  Pour un point de passage, le champ km de la liste choisit le passage.
+- **Détours** (une cascade à 2 km de la route…) : un média « hors trace »
+  peut être coché à la main ; il s'affiche au passage du point de la trace le
+  plus proche (« km 66,1 · détour 2,5 km »).
 - Une photo est rattachée à la trace active si elle est à moins de
   l'**écart max.** (200 m par défaut) ; sinon elle est marquée « hors trace ».
   La case **vidéo** de chaque vignette choisit les photos à montrer.
@@ -117,15 +162,43 @@ photos défilent, puis réaccélère. Sur la trace de test, 3 photos à Plan Lac
 font passer le point de 266 m/s à ~50 m/s. La durée de la vidéo augmente
 d'autant ; la case « Ralentir le point aux photos » désactive l'effet.
 
-## Projet (.json)
+## Projet
 
-**Enregistrer (.json)** produit un fichier unique qui contient toutes les
-traces GPX chargées (avec leurs noms de fichier d'origine), leurs points de
-passage, la trace active et tous les réglages. Le projet est nommé d'après le
-dossier chargé (`samples/` → `samples.gpxcine.json`), sinon d'après le GPX
-quand il n'y en a qu'un. Les projets de l'ancien format (une seule trace)
-s'ouvrent toujours. **Ouvrir un projet** (ou un simple glisser-déposer du
-`.json`) restaure la session à l'identique, fond de carte et relief compris.
+**Un projet = un dossier**, par exemple :
+
+```
+replay/
+├── full.gpxcine.json             (où vous voulez dans le dossier)
+├── gpx/                          les .gpx d'origine (font foi s'ils changent)
+└── photos/
+    ├── 20260815/                 photos et vidéos du 15 août
+    └── 20260816/
+```
+
+- **📂 Ouvrir** (en haut du panneau) : choisissez le dossier du projet. Le
+  fichier `.gpxcine.json` le plus récent est ouvert, puis les photos/vidéos de
+  chaque trace sont **rechargées automatiquement** : depuis le dossier noté
+  dans le projet, sinon depuis le sous-dossier qui porte le nom ou la date du
+  GPX (`20260816` ↔ `20260816.gpx`). Un dossier sans projet mais contenant
+  des GPX devient un nouveau projet. On peut aussi y glisser-déposer le
+  dossier.
+- **GPX modifiés** : les fichiers `.gpx` présents dans le dossier du projet
+  (par exemple `replay/gpx/`) font foi. À l'ouverture, une trace dont le
+  fichier a changé est mise à jour : points de passage replacés sur la
+  nouvelle trace d'après leur position, départ et arrivée aux nouvelles
+  extrémités, titres et réglages conservés (sous-titre et durée recalculés
+  s'ils étaient restés à leur valeur par défaut). Un GPX nouveau dans le
+  dossier est ajouté au projet. Enregistrez ensuite pour garder la mise à jour.
+- **💾 Enregistrer** (ou ⌘S) : écrit directement dans le fichier du projet ;
+  la première fois, choisissez le dossier où le créer. Les dossiers de médias
+  y sont notés en chemins relatifs.
+- Contenu : traces GPX, titres, sous-titres, durées, points de passage (nom,
+  position exacte, couleur), départ/arrivée, réglages, trace active, et pour
+  chaque média sa position placée à la main et son choix d'inclusion. Les
+  fichiers photo/vidéo eux-mêmes restent dans leurs dossiers.
+- L'ouverture et l'enregistrement dans un dossier nécessitent Chrome ou Edge.
+  Ailleurs : ouverture d'un fichier `.json`, enregistrement par
+  téléchargement, dossiers de médias à rechoisir (⚠ dans la liste des traces).
 
 ## Points de passage
 
