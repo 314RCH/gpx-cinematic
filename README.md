@@ -6,7 +6,7 @@ navigateur.
 
 ## Lancer
 
-**En ligne** : <https://pierrebressy.github.io/gpx2mp4/> (GitHub Pages, rien à
+**En ligne** : <https://pedro-ch.github.io/gpx2mp4/> (GitHub Pages, rien à
 installer ; les traces, photos et vidéos restent sur votre ordinateur, rien
 n'est envoyé nulle part hormis la trace pour la détection des routes
 OpenStreetMap, sur demande).
