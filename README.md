@@ -1,101 +1,104 @@
 # GPX Cinematic
 
-Application web (un seul fichier, sans build) qui transforme une trace GPX en
-animation vidéo 16:9 sur fond satellite, avec export MP4 directement depuis le
-navigateur.
+Web app (a single file, no build step) that turns a GPX track into a 16:9
+video animation over satellite imagery, with MP4 export straight from the
+browser.
 
-## Lancer
+## Running it
 
-**En ligne** : <https://pedro-ch.github.io/gpx2mp4/> (GitHub Pages, rien à
-installer ; les traces, photos et vidéos restent sur votre ordinateur, rien
-n'est envoyé nulle part hormis la trace pour la détection des routes
-OpenStreetMap, sur demande).
+**Online**: <https://314rch.github.io/gpx-cinematic/> (GitHub Pages, nothing to
+install; your tracks, photos and videos stay on your computer, and nothing is
+sent anywhere except the track for OpenStreetMap road detection, on request).
 
-**En local** :
+**Locally**:
 
 ```bash
 cd gpx2mp4 && python3 -m http.server 5178
 ```
 
-puis ouvrir <http://localhost:5178/index.html>.
+then open <http://localhost:5178/index.html>.
 
-Après une mise à jour de `index.html`, recharger la page sans cache
-(Cmd+Maj+R) : le petit serveur Python ne l'interdit pas au navigateur.
+After updating `index.html`, reload the page bypassing the cache
+(Cmd+Shift+R): the small Python server does not stop the browser from caching it.
 
-Un mini-serveur est nécessaire : ouvrir `index.html` en double-clic peut être
-bloqué par le navigateur pour les requêtes réseau (tuiles de carte).
+A mini server is required: opening `index.html` by double-clicking it may lead
+the browser to block network requests (map tiles).
 
-Testé sur Chrome / Edge / Brave et Safari 17+ (l'export MP4 utilise WebCodecs).
+Tested on Chrome / Edge / Brave and Safari 17+ (MP4 export uses WebCodecs).
 
-## Utilisation
+## Usage
 
-1. Déposer un fichier `.gpx` (ou cliquer sur la zone de dépôt).
-2. Régler titre, couleur, caméra et rythme dans le panneau de gauche.
-3. `Espace` (ou ▶) pour prévisualiser, la réglette pour se déplacer dans le temps.
-4. **Exporter en MP4** : rendu image par image en 1920×1080.
+1. Drop a `.gpx` file (or click the drop zone).
+2. Set the title, color, camera and pacing in the left panel.
+3. `Space` (or ▶) to preview, the timeline to move through time.
+4. **Export MP4**: frame-by-frame rendering at 1920×1080.
 
-## Déroulé de l'animation
+## How the animation unfolds
 
-| Phase | Ce qui se passe |
+| Phase | What happens |
 |---|---|
-| Intro | Vue globale de la trace, nord en haut, puis zoom vers le point de départ |
-| Parcours | Caméra inclinée qui suit le point courant et vise en avant, trace persistante |
-| Final | Dézoom vers la vue globale nord en haut + carte de fin : titre, **sous-titre de fin** (champ libre, propre à chaque trace, rien s'il est vide), puis distance, altitude max, durée (si le GPX est horodaté) |
+| Intro | Overview of the track, north up, then zoom in to the start point |
+| Route | Tilted camera following the current point and looking ahead, persistent track |
+| Outro | Zoom out to the north-up overview + end card: title, **end subtitle** (free text, specific to each track, nothing if empty), then distance, max altitude, duration (if the GPX is timestamped) |
 
-## Plusieurs traces
+## Multiple tracks
 
-On peut charger plusieurs GPX à la fois : sélection multiple, **📁 Ouvrir un
-dossier**, ou glisser-déposer d'un dossier entier (sous-dossiers compris).
-Les traces apparaissent dans une liste ; un clic rend une trace **active**.
+You can load several GPX files at once: multiple selection in the file
+picker, or drag and drop several files or a whole folder (subfolders
+included) onto the drop zone.
+The tracks appear in a list; clicking one makes it **active**.
 
-- La trace active est celle que la caméra suit et qui est **exportée**.
-- Chaque trace garde ses propres points de passage (départ, passages,
-  arrivée, couleurs de tronçons), son titre, son sous-titre et sa durée.
-- Les autres traces sont dessinées **en gris** quand elles sont dans le champ,
-  avec leurs départs et arrivées (repères gris). Une étiquette grise qui
-  tomberait sur un repère de la trace active est masquée.
-- Une trace déjà chargée (même contenu) n'est pas ajoutée deux fois.
+- The active track is the one the camera follows and the one that is **exported**.
+- Each track keeps its own waypoints (start, intermediate waypoints,
+  finish, section colors), its title, its subtitle and its duration.
+- Other tracks are drawn **in gray** when they are in view, with their starts
+  and finishes (gray markers). A gray label that would overlap a marker of
+  the active track is hidden.
+- A track that is already loaded (same content) is not added twice.
 
-## Onglets
+## Tabs
 
-- **🎬 Vidéo** : l'aperçu 16:9 tel qu'il sera exporté, avec la lecture.
-- **🗺 Carte & photos** : la carte réelle, interactive (molette, glisser),
-  avec la trace active, les points de passage (déplaçables) et les photos ;
-  à droite, un bandeau vertical des vignettes. « 🖈 Placer sur la carte »
-  ouvre cet onglet en mode ajout de points.
-- **✂ Vidéos** : découpe des clips de la trace active (voir plus bas).
+- **🎬 Video**: the 16:9 preview exactly as it will be exported, with playback.
+- **🗺 Map & photos**: the real, interactive map (scroll wheel, drag),
+  with the active track, waypoints (draggable) and photos; on the right, a
+  vertical strip of thumbnails. “🖈 Place on map” opens this tab in
+  waypoint-adding mode.
+- **✂ Clips**: trimming of the active track’s video clips (see below).
 
-## Photos et vidéos
+**Theme**: the button at the top right of the panel switches the interface
+between ◐ Auto (follows the system setting), ☀ Light and ☾ Dark. The choice
+is remembered by the browser. The video preview and the clip editor stay
+dark in both themes, since that is what gets exported.
 
-**Les médias sont rangés par trace.** Sélectionnez une trace, puis
-**📁 Dossier de la trace active** (section Photos & vidéos) : son contenu est
-rattaché à cette trace uniquement. La liste des traces indique ce que chacune
-contient (📷 photos, 🎬 vidéos) ; l'onglet Carte & photos et la vidéo
-n'utilisent que les médias de la trace active. Une organisation simple : un
-sous-dossier par jour ou par GPX.
+## Photos and videos
 
-- **Photos** : jpg, png, webp (heic seulement sous Safari). Position et date
-  lues dans l'EXIF, y compris le bloc `eXIf` des PNG (exports d'iPhone).
-- **Vidéos** : mp4, mov, m4v, webm (HEVC d'iPhone compris sous Chrome/Safari
-  macOS). Position et date lues dans les métadonnées QuickTime
-  (`com.apple.quicktime.location.ISO6709` ou `©xyz`, date avec fuseau), en ne
-  lisant que l'en-tête du fichier. Dans la vidéo, le clip est joué en entier
-  (ou tel que monté dans l'onglet ✂ Vidéos) pendant l'arrêt du point, sans
-  limite de durée. La légende indique où en est la lecture
-  (« ▶ 0:04 / 0:12 »), avec une barre d'avancement au bas du clip. À
-  l'export, chaque image est calée exactement sur l'instant du clip. Le son
-  n'est pas repris.
+**Media are organized by track.** Select a track, then
+**📁 Active track folder** (Track photos & videos section): its contents are
+attached to that track only. The track list shows what each one contains
+(📷 photos, 🎬 videos); the Map & photos tab and the video only use the
+active track’s media. A simple layout: one subfolder per day or per GPX.
 
-### Ajouter des médias à une trace
+- **Photos**: jpg, png, webp (heic in Safari only). Location and date are
+  read from EXIF, including the `eXIf` chunk in PNGs (iPhone exports).
+- **Videos**: mp4, mov, m4v, webm (iPhone HEVC included in Chrome/Safari on
+  macOS). Location and date are read from the QuickTime metadata
+  (`com.apple.quicktime.location.ISO6709` or `©xyz`, date with time zone),
+  reading only the file header. In the video, the clip is played in full
+  (or as edited in the ✂ Clips tab) while the marker is stopped, with no
+  duration limit. The caption shows playback progress
+  (“▶ 0:04 / 0:12”), with a progress bar at the bottom of the clip. On
+  export, each frame is synced exactly to the matching moment in the clip.
+  Audio is not included.
 
-Sélectionnez la trace, puis **📁 Dossier de la trace active**. À l'ouverture
-d'un projet, les dossiers sont retrouvés automatiquement (voir « Projet »).
+### Adding media to a track
 
-**Vidéo « illisible »** : le survol de la mention donne la raison exacte. Une
-erreur de lecture passagère (fréquente avec les vidéos HDR d'iPhone) est
-retentée une fois automatiquement. Si le navigateur ne sait vraiment pas la
-décoder, convertissez-la en H.264 avec l'outil de macOS, puis recopiez sa
-position et sa date :
+Select the track, then **📁 Active track folder**. When a project is opened,
+folders are found again automatically (see “Project”).
+
+**“Unreadable” video**: hover over the label to see the exact reason. A
+transient playback error (common with iPhone HDR videos) is retried once
+automatically. If the browser really cannot decode it, convert it to H.264
+with the macOS tool, then copy its location and date back:
 
 ```bash
 avconvert --preset Preset1920x1080 --source IMG.mov --output IMG.mp4
@@ -105,316 +108,313 @@ avconvert --preset Preset1920x1080 --source IMG.mov --output IMG.mp4
 exiftool -overwrite_original -TagsFromFile IMG.mov -Keys:GPSCoordinates -Keys:CreationDate IMG.mp4
 ```
 
-Le bandeau de l'onglet Carte & photos a trois filtres : **Tous**,
-**Géolocalisés**, **Non placés** (avec les compteurs).
+The strip in the Map & photos tab has three filters: **All**,
+**Geotagged**, **Unplaced** (with counts).
 
-- **Sphère bleue** : photo géolocalisée par son GPS. **Sphère orange** :
-  position placée à la main. **« ? »** : pas de position. Un clic sur la
-  vignette « ? » (ou sur 📍 pour déplacer n'importe quelle photo) passe en mode
-  placement : le clic suivant sur la carte fixe sa position (Échap annule).
-- Une position placée à la main reste prioritaire sur le GPS. Pour une photo
-  qui a les deux, **⌖** (sur la vignette) revient au GPS, et le bouton
-  **⌖ Rétablir les positions GPS** le fait pour toutes.
-- Les positions placées à la main et les choix d'inclusion sont mémorisés
-  dans le navigateur **et** dans le projet `.json`, trace par trace (clé : nom,
-  taille et date du fichier), et reviennent quand on rouvre le même dossier.
-  Un fichier retouché ou réexporté (autre date) les retrouve par son nom.
-  Un projet rouvert signale par ⚠ les traces dont il faut recharger le
-  dossier. Les fichiers eux-mêmes ne sont jamais modifiés.
-- **Aller-retour, boucles** : quand la trace repasse au même endroit, une
-  photo est près de plusieurs passages. Le passage retenu est celui qui
-  respecte l'ordre chronologique des prises de vue (une photo plus tardive est
-  plus loin sur la trace), même si le GPX n'est pas horodaté. Le bouton **⇄**
-  de la vignette bascule vers l'autre passage ; ce choix est mémorisé.
-  Pour un point de passage, le champ km de la liste choisit le passage.
-- **Détours** (une cascade à 2 km de la route…) : un média « hors trace »
-  peut être coché à la main ; il s'affiche au passage du point de la trace le
-  plus proche (« km 66,1 · détour 2,5 km »).
-- Une photo est rattachée à la trace active si elle est à moins de
-  l'**écart max.** (200 m par défaut) ; sinon elle est marquée « hors trace ».
-  La case **vidéo** de chaque vignette choisit les photos à montrer.
+- **Blue sphere**: photo geotagged by its GPS. **Orange sphere**: location
+  placed by hand. **“?”**: no location. Clicking the “?” thumbnail (or 📍 to
+  move any photo) switches to placement mode: the next click on the map sets
+  its location (Esc cancels).
+- A location placed by hand takes priority over GPS. For a photo that has
+  both, **⌖** (on the thumbnail) reverts to GPS, and the
+  **⌖ Restore GPS positions** button does it for all of them.
+- Hand-placed locations and inclusion choices are saved in the browser
+  **and** in the `.json` project, track by track (key: file name, size and
+  date), and come back when you reopen the same folder. An edited or
+  re-exported file (different date) is matched by its name. A reopened
+  project flags with ⚠ the tracks whose folder needs reloading. The files
+  themselves are never modified.
+- **Out-and-back, loops**: when the track passes the same place again, a
+  photo is near several passes. The pass chosen is the one that respects the
+  chronological order of the shots (a later photo is further along the
+  track), even if the GPX is not timestamped. The thumbnail’s **⇄** button
+  switches to the other pass; this choice is saved. For a waypoint, the km
+  field in the list picks the pass.
+- **Detours** (a waterfall 2 km off the road…): an “off track” media item
+  can be ticked by hand; it is shown when the marker passes the nearest point
+  of the track (“km 66.1 · detour 2.5 km”).
+- A photo is attached to the active track if it is within the
+  **Max. distance** (200 m by default); otherwise it is marked “off track”.
+  Each thumbnail’s **video** checkbox chooses which photos to show.
 
-### Placement par l'heure (à valider)
+### Placement by time (to be confirmed)
 
-**🕒 Proposer les positions par l'heure** calcule une position pour les photos
-sans GPS, sans rien appliquer : elles apparaissent en pointillés, et chaque
-proposition se valide (✓) ou se rejette (✗), ou toutes d'un coup.
+**🕒 Suggest positions from time** computes a location for photos without
+GPS, without applying anything: they appear dotted, and each suggestion can
+be accepted (✓) or rejected (✗), or all at once.
 
-1. Si une trace chargée est **horodatée** et couvre l'heure de la photo, la
-   position vient du GPX. L'heure EXIF n'a pas de fuseau : elle est ramenée
-   en UTC par le fuseau EXIF s'il existe, sinon par un décalage calé
-   automatiquement sur les photos qui ont une heure GPS, sinon par le champ
-   **Horloge − UTC (h)**.
-2. Sinon, la position est **interpolée entre les photos géolocalisées** de la
-   trace active, au prorata du temps (même horloge, aucun décalage à
-   connaître). Avant la première ou après la dernière photo géolocalisée,
-   elle est extrapolée à la vitesse moyenne et signalée « à vérifier ».
+1. If a loaded track is **timestamped** and covers the photo’s time, the
+   location comes from the GPX. The EXIF time has no time zone: it is
+   converted to UTC using the EXIF time zone if there is one, otherwise with
+   an offset calibrated automatically from photos that have a GPS time,
+   otherwise with the **Clock − UTC (h)** field.
+2. Otherwise, the location is **interpolated between the geotagged photos**
+   of the active track, in proportion to time (same clock, no offset to
+   know). Before the first or after the last geotagged photo, it is
+   extrapolated at the average speed and flagged “to check”.
 
-### Présentation dans la vidéo
+### Presentation in the video
 
-- **Mise en avant** (par défaut) : la photo s'envole de sa sphère sur la carte
-  jusqu'au grand format centré ; la carte se floute et s'assombrit derrière,
-  les indicateurs s'effacent ; la photo zoome lentement (Ken Burns). La
-  légende (date, kilométrage, temps d'une vidéo, « 2 / 4 ») est placée
-  **sous** l'image, sur une plaque sombre : sur une ligne sous une image
-  large, sur deux lignes centrées sous une image étroite (portrait), jamais
-  par-dessus l'image. Les photos d'un même groupe s'enchaînent en fondu, puis
-  la dernière retourne à sa sphère.
-- **Encadré discret** : la photo en haut à droite, façon tirage, légende
-  dessous ; le tirage garde une largeur minimale pour qu'une photo en
-  portrait ait la place de sa légende (sur deux lignes au besoin).
+- **Spotlight** (default): the photo flies out of its sphere on the map up to
+  a large centered view; the map blurs and darkens behind it, the indicators
+  fade out; the photo slowly zooms in (Ken Burns). The caption (date,
+  distance, video time, “2 / 4”) is placed **below** the image, on a dark
+  plate: on one line under a wide image, on two centered lines under a narrow
+  (portrait) image, never over the image. Photos in the same group follow
+  one another with a crossfade, then the last one returns to its sphere.
+- **Corner frame**: the photo in the top-right corner, like a print, with the
+  caption below; the print keeps a minimum width so that a portrait photo has
+  room for its caption (on two lines if needed).
 
-Dans les deux cas, chaque photo retenue a une sphère sur la carte à son
-emplacement et un point sur la mini-carte.
+In both cases, each selected photo has a sphere on the map at its location
+and a dot on the minimap.
 
-**Arrêt du point** : en arrivant sur une photo ou une vidéo, le point freine
-franchement (≈ 0,8 s) et s'arrête sur place. Il ne repart qu'une fois
-l'affichage terminé : durée par photo écoulée, ou vidéo lue jusqu'au bout
-(ou son montage), envol et retour de la photo compris. Il
-réaccélère ensuite en douceur. Les médias très proches (moins de 150 m, ou
-moins d'une seconde de parcours d'écart) forment un groupe : un seul arrêt,
-au premier média, pendant lequel ils s'enchaînent. La durée de la vidéo
-augmente d'autant. Décochez « Arrêter le point pendant les photos et vidéos »
-pour que les médias défilent sans arrêt, pendant le passage du point.
+**Marker stop**: when reaching a photo or video, the marker brakes firmly
+(≈ 0.8 s) and stops in place. It only moves on once the display is over:
+per-photo duration elapsed, or video played to the end (or its edit),
+including the photo’s fly-out and return. It then speeds up again smoothly.
+Media very close to each other (less than 150 m, or less than one second of
+travel apart) form a group: a single stop, at the first item, during which
+they follow one another. The video gets longer accordingly. Untick
+“Stop the marker during photos and videos” to have media shown without
+stopping, while the marker keeps moving.
 
-### Monter les vidéos (onglet ✂ Vidéos)
+### Editing videos (✂ Clips tab)
 
-À gauche, les vidéos de la trace active (durée du montage, nombre de
-segments, km ou état : non placée, exclue, hors trace). À droite, le lecteur
-de l'éditeur (avec le son, que la vidéo exportée n'a pas ; 🔇/🔊) et une
-réglette illustrée d'images du clip.
+On the left, the active track’s videos (edit duration, number of segments,
+km or status: unplaced, excluded, off track). On the right, the editor’s
+player (with sound, which the exported video does not have; 🔇/🔊) and a
+timeline illustrated with frames from the clip.
 
-Un clip peut garder **plusieurs segments**, joués dans l'ordre :
-- cliquer sur la réglette pour se placer (et sélectionner le segment qui s'y
-  trouve) ; glisser les **poignées jaunes** pour ajuster le début ou la fin
-  d'un segment, l'image du point de coupe s'affiche ;
-- **⟦ Début ici** / **Fin ici ⟧** (touches **I** / **O**) : bord du segment
-  à la position courante ;
-- **✂ Couper ici** (**S**) : divise le segment en deux ; **🗑 Segment**
-  (**Suppr**) retire le segment sélectionné. Couper deux fois puis supprimer
-  le morceau du milieu enlève un passage ;
-- **✚ Segment ici** : nouveau segment de 4 s à partir de la position
-  courante, hors des segments existants ;
-- **↺ Tout** : revient au clip entier.
+A clip can keep **several segments**, played in order:
+- click the timeline to move there (and select the segment located there);
+  drag the **yellow handles** to adjust the start or end of a segment, the
+  frame at the cut point is shown;
+- **⟦ In here** / **Out here ⟧** (keys **I** / **O**): segment edge at the
+  current position;
+- **✂ Split here** (**S**): splits the segment in two; **🗑 Segment**
+  (**Delete**) removes the selected segment. Splitting twice then deleting
+  the middle piece removes a passage;
+- **✚ Segment here**: new 4 s segment starting at the current position,
+  outside existing segments;
+- **↺ Whole clip**: reverts to the whole clip.
 
-Sous la réglette, la liste des segments et, entre deux segments, le
-**raccord** : coupe franche, fondu enchaîné, glissé (l'image suivante pousse
-la précédente), fondu au noir, fondu au blanc, flou. Leur durée se règle
-dans « Fondus » (0,8 s par défaut). **▶ Montage** (**M**) joue le résultat
-tel qu'il apparaîtra dans la vidéo. Espace = lecture/pause du fichier,
-← → = ±1 s, ⇧← ⇧→ = ±1 image.
+Below the timeline, the list of segments and, between two segments, the
+**transition**: hard cut, crossfade, slide (the next image pushes the
+previous one out), fade to black, fade to white, blur. Their duration is set
+in “Transitions” (0.8 s by default). **▶ Play edit** (**M**) plays the result
+as it will appear in the video. Space = play/pause the file,
+← → = ±1 s, ⇧← ⇧→ = ±1 frame.
 
-Dans la vidéo, le point reste arrêté pendant tout le montage. Deux lecteurs
-se relaient sur le même fichier : pendant que l'un joue un segment, l'autre
-attend déjà calé sur le suivant, ce qui donne des coupes nettes et permet
-les fondus enchaînés.
+In the video, the marker stays stopped for the whole edit. Two players take
+turns on the same file: while one plays a segment, the other is already
+waiting, cued to the next one, which gives clean cuts and makes crossfades
+possible.
 
-## Projet
+## Project
 
-**Un projet = un dossier**, par exemple :
+**One project = one folder**, for example:
 
 ```
 replay/
-├── full.gpxcine.json             (où vous voulez dans le dossier)
-├── gpx/                          les .gpx d'origine (font foi s'ils changent)
+├── full.gpxcine.json             (anywhere in the folder)
+├── gpx/                          the original .gpx files (authoritative if they change)
 └── photos/
-    ├── 20260815/                 photos et vidéos du 15 août
+    ├── 20260815/                 photos and videos from 15 August
     └── 20260816/
 ```
 
-- **📂 Ouvrir** (en haut du panneau) : choisissez le dossier du projet. Le
-  fichier `.gpxcine.json` le plus récent est ouvert, puis les photos/vidéos de
-  chaque trace sont **rechargées automatiquement** : depuis le dossier noté
-  dans le projet, sinon depuis le sous-dossier qui porte le nom ou la date du
-  GPX (`20260816` ↔ `20260816.gpx`). Un dossier sans projet mais contenant
-  des GPX devient un nouveau projet. On peut aussi y glisser-déposer le
-  dossier.
-- **Dossier par défaut** : le navigateur ne peut pas viser un chemin
-  (`/Users/…/replay`) de lui-même, mais il retient le dernier dossier de
-  projet ouvert ou enregistré. 📂 Ouvrir démarre alors dans ce dossier, et un
-  bouton **↻ Rouvrir « replay »** le rouvre en un clic, sans passer par le
-  sélecteur (Chrome demande juste de confirmer l'accès ; choisir « Autoriser
-  à chaque visite » évite même cette confirmation).
-- **GPX modifiés** : les fichiers `.gpx` présents dans le dossier du projet
-  (par exemple `replay/gpx/`) font foi. À l'ouverture, une trace dont le
-  fichier a changé est mise à jour : points de passage replacés sur la
-  nouvelle trace d'après leur position, départ et arrivée aux nouvelles
-  extrémités, titres et réglages conservés (sous-titre et durée recalculés
-  s'ils étaient restés à leur valeur par défaut). Un GPX nouveau dans le
-  dossier est ajouté au projet. Enregistrez ensuite pour garder la mise à jour.
-- **💾 Enregistrer** (ou ⌘S) : écrit directement dans le fichier du projet ;
-  la première fois, choisissez le dossier où le créer. Les dossiers de médias
-  y sont notés en chemins relatifs.
-- Contenu : traces GPX, titres, sous-titres, durées, points de passage (nom,
-  position exacte, couleur), départ/arrivée, réglages, trace active, et pour
-  chaque média sa position placée à la main, son choix d'inclusion et, pour
-  une vidéo, son montage (segments, raccords, durée des fondus). Les
-  fichiers photo/vidéo eux-mêmes restent dans leurs dossiers.
-- L'ouverture et l'enregistrement dans un dossier nécessitent Chrome ou Edge.
-  Ailleurs : ouverture d'un fichier `.json`, enregistrement par
-  téléchargement, dossiers de médias à rechoisir (⚠ dans la liste des traces).
+- **📂 Open** (at the top of the panel): choose the project folder. The most
+  recent `.gpxcine.json` file is opened, then each track’s photos/videos are
+  **reloaded automatically**: from the folder recorded in the project,
+  otherwise from the subfolder named after the GPX’s name or date
+  (`20260816` ↔ `20260816.gpx`). A folder with no project but containing
+  GPX files becomes a new project. You can also drag and drop the folder
+  onto it.
+- **Default folder**: the browser cannot target a path
+  (`/Users/…/replay`) on its own, but it remembers the last project folder
+  opened or saved. 📂 Open then starts in that folder, and a
+  **↻ Reopen “replay”** button reopens it in one click, without going through
+  the picker (Chrome just asks you to confirm access; choosing “Allow on
+  every visit” even avoids that confirmation).
+- **Modified GPX files**: the `.gpx` files in the project folder
+  (e.g. `replay/gpx/`) are authoritative. On opening, a track whose file has
+  changed is updated: waypoints are moved onto the new track based on their
+  location, start and finish go to the new ends, titles and settings are kept
+  (subtitle and duration are recomputed if they were still at their default
+  value). A new GPX in the folder is added to the project. Then save to keep
+  the update.
+- **💾 Save** (or ⌘S): writes directly to the project file; the first time,
+  choose the folder to create it in. Media folders are stored in it as
+  relative paths.
+- Contents: GPX tracks, titles, subtitles, durations, waypoints (name,
+  exact location, color), start/finish, settings, active track, and for each
+  media item its hand-placed location, its inclusion choice and, for a video,
+  its edit (segments, transitions, transition duration). The photo/video
+  files themselves stay in their folders.
+- Opening and saving to a folder require Chrome or Edge. Elsewhere: a `.json`
+  file is opened, saving is done by download, and media folders must be
+  chosen again (⚠ in the track list).
 
-## Points de passage
+## Waypoints
 
-- **Départ** et **Arrivée** sont nommés dans les deux champs en haut de la
-  section : les repères sont créés aux extrémités de la trace. Si le GPX
-  contient déjà un `<wpt>` à une extrémité, c'est son nom qui est repris.
-  Vider un champ retire le repère.
-- Les balises `<wpt>` du GPX sont importées et accrochées à la trace.
-- **Placer sur la carte** : la carte devient interactive (zoom/déplacement),
-  chaque clic ajoute un point accroché à la trace ; les repères se glissent.
-- **+ À la position** : ajoute un point à la position courante de la réglette.
-- Dans la liste, le champ de droite (km) repositionne le point le long de la trace.
+- **Start** and **Finish** are named in the two fields at the top of the
+  section: their markers are created at the ends of the track. If the GPX
+  already contains a `<wpt>` at one end, its name is used.
+  Clearing a field removes the marker.
+- The GPX’s `<wpt>` tags are imported and snapped to the track.
+- **Place on map**: the map becomes interactive (zoom/pan), each click adds
+  a waypoint snapped to the track; markers can be dragged.
+- **+ At playhead**: adds a waypoint at the timeline’s current position.
+- In the list, the right-hand field (km) moves the waypoint along the track.
 
-Au passage d'un point, son nom s'affiche en bandeau et son repère s'allume.
+When the marker passes a waypoint, its name is shown in a banner and its
+marker lights up.
 
-### Couleur des tronçons
+### Section colors
 
-La pastille de couleur d'un point fixe la couleur de la trace **à partir de ce
-point**, jusqu'au prochain point qui en définit une autre. Une pastille estompée
-signifie « couleur héritée » : le tronçon précédent continue. Le premier tronçon
-prend la couleur générale (section Habillage), et l'arrivée n'a pas de pastille
-puisqu'aucun tronçon n'en part. ↺ revient à la couleur héritée.
+A waypoint’s color swatch sets the track color **from that waypoint
+onwards**, up to the next waypoint that defines another one. A faded swatch
+means “inherited color”: the previous section continues. The first section
+takes the general color (Overlay section), and the finish has no swatch
+since no section starts from it. ↺ reverts to the inherited color.
 
-La trace à venir (pointillés) prend déjà la couleur de ses tronçons. La couleur
-du tronçon en cours s'applique aussi au repère de position, à la distance
-affichée, au remplissage du profil altimétrique, au triangle de cap réel de la
-rose des vents et à la mini-carte. Elle est conservée
-dans le projet `.json`.
+The upcoming track (dotted) already takes the color of its sections. The
+current section’s color also applies to the position marker, the displayed
+distance, the elevation profile fill, the true-heading triangle on the
+compass rose and the minimap. It is saved
+in the `.json` project.
 
-## Routes
+## Roads
 
-Sous la mini-carte, un cartouche indique la route suivie : le numéro dans un
-panneau (couleur selon le préfixe : A et N rouge, D jaune, E vert, M bleu
-roi, autres numéros bleu), suivi du nom. Au changement de route, l'ancien
-cartouche s'efface pendant que le nouveau apparaît. Case **Route empruntée**
-dans Habillage.
+Below the minimap, a label shows the current road: the number on a sign
+(color by prefix: A and N red, D yellow, E green, M royal blue, other
+numbers blue), followed by the name. When the road changes, the old label
+fades out as the new one appears. **Current road** checkbox in Overlay.
 
-Section **Routes** du panneau :
-- chaque ligne donne la route suivie **à partir de ce km**, jusqu'à la ligne
-  suivante. Placez la tête de lecture là où la route change, puis
-  **+ À la position** : une ligne est créée à ce km, il reste à taper le nom.
-  Le km se corrige à la main, ▸ amène la tête de lecture au début de la
-  route ;
-- écrivez `1 · Hringvegur` ou `D902 · Col du Galibier` : ce qui précède le
-  « · » s'affiche dans le panneau s'il ressemble à un numéro de route ; sinon
-  le nom s'affiche seul, avec un pictogramme de route. Un nom vide n'affiche
-  rien sur ce tronçon (piste, hors route…) ;
-- **🛣 Détecter (OSM)** propose la liste d'après OpenStreetMap : la trace est
-  envoyée par morceaux au service Overpass (overpass-api.de), chaque point
-  est rattaché à la voie la plus proche orientée dans le même sens, et les
-  tronçons de moins de 400 m (carrefours, ponts) sont gommés. Compter
-  quelques secondes pour 10 km (≈ 20 s pour 80 km). Le résultat se corrige
-  ensuite librement.
+**Roads** section of the panel:
+- each row gives the road followed **from that km**, up to the next row.
+  Put the playhead where the road changes, then
+  **+ At playhead**: a row is created at that km, you just type the name.
+  The km can be corrected by hand, ▸ moves the playhead to the start of the
+  road;
+- type `1 · Hringvegur` or `D902 · Col du Galibier`: what comes before the
+  “·” is shown on the sign if it looks like a road number; otherwise the
+  name is shown alone, with a road icon. An empty name shows nothing on that
+  section (dirt track, off-road…);
+- **🛣 Detect (OSM)** suggests the list from OpenStreetMap: the track is
+  sent in chunks to the Overpass service (overpass-api.de), each point is
+  matched to the nearest way running in the same direction, and sections
+  shorter than 400 m (junctions, bridges) are smoothed out. Allow a few
+  seconds per 10 km (≈ 20 s for 80 km). The result can then be freely
+  edited.
 
-Les routes sont propres à chaque trace et enregistrées dans le projet. Si le
-GPX est mis à jour, chaque début de route est replacé d'après sa position.
+Roads are specific to each track and saved in the project. If the GPX is
+updated, each road start is moved based on its location.
 
-## Chiffres affichés
+## Displayed figures
 
-Pendant le trajet : **distance**, **altitude**, **altitude max** atteinte
-jusque-là (et la vitesse si le GPX est horodaté). Sur la carte de fin :
-distance, **altitude max**, durée.
+During the journey: **distance**, **altitude**, **max altitude** reached so
+far (and speed if the GPX is timestamped). On the end card: distance,
+**max altitude**, duration.
 
-Le **dénivelé positif** n'est plus affiché par défaut : sur un itinéraire
-planifié (gpx.studio, Komoot…), les altitudes sont tirées d'un modèle de
-terrain qui « voit » les falaises et talus au bord de la route, et le D+ est
-fortement surestimé (sur un trajet de 357 km dans les fjords de l'Ouest :
-de 3 200 à 4 800 m selon le lissage). La case **Afficher le dénivelé positif**
-(Habillage) le rétablit, pour une trace enregistrée avec un altimètre.
+**Elevation gain** is no longer shown by default: on a planned route
+(gpx.studio, Komoot…), altitudes come from a terrain model that “sees” the
+cliffs and embankments along the road, and the elevation gain is heavily
+overestimated (on a 357 km drive through the Westfjords: from 3,200 to
+4,800 m depending on smoothing). The **Show elevation gain** checkbox
+(Overlay) brings it back, for a track recorded with an altimeter.
 
-## Rose des vents
+## Compass rose
 
-Un compas de marine en haut à gauche indique l'orientation de la carte : le
-cadran tourne avec elle (le N rouge pointe toujours le vrai nord), la ligne de
-foi blanche fixe en haut et le cap affiché dessous (« NE · 042° ») donnent la
-direction de la caméra. Un second triangle, dans la couleur du tronçon en cours,
-indique le **cap réel** (direction du déplacement sur la trace) : l'écart entre
-les deux triangles montre de combien la caméra, lissée, diffère de la route. Elle fait partie de l'image exportée ; case *Rose des vents*
-dans Habillage pour la masquer.
+A marine compass in the top-left corner shows the map orientation: the dial
+rotates with it (the red N always points to true north), the fixed white
+lubber line at the top and the heading shown below it (“NE · 042°”) give
+the camera direction. A second triangle, in the current section’s color,
+shows the **true heading** (direction of travel along the track): the gap
+between the two triangles shows how much the smoothed camera differs from the road. It is part of the exported image; *Compass rose* checkbox
+in Overlay to hide it.
 
-## Mini-carte
+## Minimap
 
-À droite de la rose des vents, une vignette **nord toujours en haut** montre
-l'emprise de la trace active agrandie de 20 % : fond de carte, trace complète,
-parcours effectué dans la couleur de chaque tronçon, position actuelle et un
-cône indiquant la direction de la caméra. Les autres traces chargées y
-figurent en gris si elles passent dans la zone. Elle apparaît quand le titre
-s'efface et disparaît pour la vue finale. Case *Mini-carte* dans Habillage.
+To the right of the compass rose, an **always north-up** thumbnail shows the
+active track’s extent enlarged by 20%: basemap, full track, route covered so
+far in each section’s color, current position and a cone showing the
+camera direction. Other loaded tracks appear in gray if they pass through
+the area. It appears when the title fades out and disappears for the final
+view. *Minimap* checkbox in Overlay.
 
-## Réglages notables
+## Notable settings
 
-- **Épaisseur de la trace active** (1 à 2,5×, défaut 1,5×) : la trace suivie
-  est dessinée plus épaisse que les traces inactives, qui restent fines et
-  grises.
+- **Active track width** (1 to 2.5×, default 1.5×): the followed track is
+  drawn thicker than inactive tracks, which stay thin and gray.
 
-- **Zoom de suivi / Inclinaison** : hauteur et angle de la caméra.
-- **Position du point à l'écran** : place le point courant plus ou moins bas,
-  donc plus ou moins de visibilité « devant ».
-- **Anticipation** : distance de visée en avant pour calculer le cap.
-- **Lissage du cap** (m) : lissage géométrique de la direction de la trace.
-- **Douceur de la caméra** (s) : inertie de la rotation, appliquée dans le
-  domaine temporel de l'animation (filtre à phase nulle, donc sans retard de
-  la caméra sur la trajectoire).
-- **Rotation maximale** (°/s) : plafond de vitesse angulaire. C'est le réglage
-  déterminant dans les lacets de montagne : sur la trace de test, le cap brut
-  de la trace atteint 88 °/s alors que la caméra reste à 25 °/s.
+- **Follow zoom / Pitch**: camera height and angle.
+- **Marker position on screen**: places the current point lower or higher,
+  hence more or less visibility “ahead”.
+- **Look-ahead**: distance ahead used to compute the heading.
+- **Heading smoothing** (m): geometric smoothing of the track direction.
+- **Camera smoothness** (s): rotation inertia, applied in the animation’s
+  time domain (zero-phase filter, so the camera does not lag behind the
+  path).
+- **Max rotation** (°/s): angular speed cap. This is the decisive setting
+  on mountain switchbacks: on the test track, the raw heading of the track
+  reaches 88 °/s while the camera stays at 25 °/s.
 
-- **Liberté du point à l'écran** (%) : autorise le point à s'écarter du centre
-  (jusqu'à cette fraction de la largeur d'image). La caméra suit alors la ligne
-  moyenne du parcours au lieu de chaque lacet : dans une suite d'épingles, la
-  carte ne balaie plus d'un bord à l'autre. 0 % = point toujours au centre.
-  Sur la trace de test, à 15 % (défaut), l'accélération de la caméra est
-  divisée par 8,5 en moyenne et par 19 en pointe.
+- **Marker freedom on screen** (%): lets the marker drift from the center
+  (up to this fraction of the frame width). The camera then follows the
+  average line of the route instead of every bend: in a series of hairpins,
+  the map no longer sweeps from one edge to the other. 0% = marker always
+  centered. On the test track, at 15% (default), camera acceleration is
+  divided by 8.5 on average and by 19 at peak.
 
-Ces réglages dépendent de la durée du parcours : le cap est
-recalculé à chaque changement, et reste entièrement déterministe pour que
-l'export image par image soit identique à l'aperçu.
-- **Défilement** : vitesse constante, ou respect des horodatages du GPX
-  (les arrêts sont alors visibles).
-- **Relief 3D** : élévation issue des tuiles Terrarium (Mapzen/AWS).
+These settings depend on the route duration: the heading is
+recomputed on every change, and stays fully deterministic so that the
+frame-by-frame export is identical to the preview.
+- **Pace**: constant speed, or following the GPX timestamps
+  (stops are then visible).
+- **3D terrain**: elevation from Terrarium tiles (Mapzen/AWS).
 
 ## Export
 
-- MP4 H.264 1920×1080, 24/30/60 i/s, 8 à 28 Mb/s.
-- Rendu déterministe : chaque image attend le chargement complet des tuiles,
-  aucune tuile floue ni saccade. L'export continue si la fenêtre passe en
-  arrière-plan.
-- **Préchargement des tuiles** (coché par défaut) : avant de rendre les
-  images, l'application parcourt la trajectoire de la caméra, relève les
-  tuiles dont chaque vue aura besoin et les télécharge en parallèle dans un
-  cache en mémoire. Le bouton **⚡ Précharger les tuiles** fait la même chose à
-  la demande.
-- **En lecture** (▶), le même parcours se fait en tâche de fond, jusqu'à
-  20 s devant la tête de lecture ; les photos et vidéos à venir sont aussi
-  décodées d'avance. Si le réseau ne suit pas, la lecture marque une pause
-  (« Chargement des tuiles… ») le temps d'avoir 2,5 s d'avance, plutôt que de
-  montrer une carte floue. Sur la trace de test, réseau à froid : 12 fois
-  moins de tuiles manquantes à l'écran.
-- Mesuré sur la trace de test : ~145 ms par image sans préchargement,
-  **~45–60 ms** après. Une vidéo de 54 s à 30 i/s (1 620 images) sort en
-  **1 min 41**, préchargement compris, au lieu d'environ 4 min 30.
-- Le cache garde jusqu'à 700 Mo de tuiles pour la session (état affiché sous le
-  bouton) ; les tuiles de relief n'ayant pas d'en-tête de cache HTTP, c'est
-  lui qui évite de les retélécharger.
-- Le fichier est assemblé en mémoire : prévoir ~2 Mo par seconde de vidéo.
-- Navigateur sans WebCodecs : repli sur une capture temps réel (WebM, ou MP4 sur Safari).
+- MP4 H.264 1920×1080, 24/30/60 fps, 8 to 28 Mbps.
+- Deterministic rendering: each frame waits for tiles to be fully loaded,
+  no blurry tiles or stutter. Export continues if the window goes into the
+  background.
+- **Preload tiles** (ticked by default): before rendering frames, the app
+  runs through the camera path, lists the tiles each view will need and
+  downloads them in parallel into an in-memory cache. The
+  **⚡ Preload tiles** button does the same on demand.
+- **During playback** (▶), the same pass runs in the background, up to
+  20 s ahead of the playhead; upcoming photos and videos are also decoded in
+  advance. If the network cannot keep up, playback pauses
+  (“Loading tiles…”) until it is 2.5 s ahead, rather than showing a blurry
+  map. On the test track, with a cold network: 12 times fewer missing tiles
+  on screen.
+- Measured on the test track: ~145 ms per frame without preloading,
+  **~45–60 ms** with it. A 54 s video at 30 fps (1,620 frames) comes out in
+  **1 min 41 s**, preloading included, instead of about 4 min 30 s.
+- The cache holds up to 700 MB of tiles for the session (status shown below
+  the button); since terrain tiles have no HTTP cache header, it is what
+  avoids downloading them again.
+- The file is assembled in memory: allow ~2 MB per second of video.
+- Browser without WebCodecs: falls back to real-time capture (WebM, or MP4 in Safari).
 
-## Sources de données
+## Data sources
 
-- Fond satellite : Esri World Imagery (© Esri, Maxar, Earthstar Geographics)
-- Fond topographique : OpenTopoMap (© OpenStreetMap contributors)
-- Relief : tuiles Terrarium (Tilezen / Mapzen, hébergées par AWS)
-- Rendu : MapLibre GL JS · Multiplexage MP4 : mp4-muxer
+- Satellite basemap: Esri World Imagery (© Esri, Maxar, Earthstar Geographics)
+- Topographic basemap: OpenTopoMap (© OpenStreetMap contributors)
+- Terrain: Terrarium tiles (Tilezen / Mapzen, hosted by AWS)
+- Rendering: MapLibre GL JS · MP4 muxing: mp4-muxer
 
-Usage personnel : vérifier les conditions d'utilisation de ces services pour un
-usage commercial ou intensif.
+Personal use: check these services’ terms of use for commercial or heavy
+use.
 
-## Fichiers
+## Files
 
-- `index.html` — toute l'application (interface, moteur d'animation, export)
-- `samples/photos/` — photos de test géolocalisées le long des traces (dont
-  un groupe de 3 à Plan Lachat, une hors trace et une sans GPS)
-- `samples/` — traces de test voisines : Télégraphe → Valloire, Valloire →
-  Galibier, Galibier → Lautaret (pour essayer le chargement d'un dossier)
-- `*.gpxcine.json` — projets enregistrés (trace + réglages + points)
+- `index.html` — the whole app (interface, animation engine, export)
+- `samples/photos/` — test photos geotagged along the tracks (including
+  a group of 3 at Plan Lachat, one off track and one without GPS)
+- `samples/` — adjoining test tracks: Télégraphe → Valloire, Valloire →
+  Galibier, Galibier → Lautaret (to try loading a folder)
+- `*.gpxcine.json` — saved projects (track + settings + waypoints)
