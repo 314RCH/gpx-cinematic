@@ -264,8 +264,13 @@ body.tab-music #musicPanel{display:flex}
 #musicPanel .mhead .sp{flex:1}
 #musicInfo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px}
 #mTLWrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 0}
-#mTL{display:block;width:100%;height:188px;cursor:pointer;touch-action:none}
-#mList{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:4px}
+#mTL{display:block;width:100%;height:240px;cursor:pointer;touch-action:none}
+#mList,#vList{display:flex;flex-direction:column;gap:4px}
+#musicPanel{overflow:auto}
+#vList:not(:empty){padding-top:6px;border-top:1px dashed var(--line)}
+.vrow .grip{cursor:grab}
+.vrow .here{font-size:11px !important}
+#voiceInfo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
 .mrow{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:12px}
 .mrow.sel{border-color:var(--accent)}
 .mrow.off{opacity:.5}
@@ -548,8 +553,18 @@ body.tab-music #musicPanel{display:flex}
       <label title="Fade-out over the last seconds of the video (s)">End fade-out <input type="text" id="mEnd"> s</label>
       <label title="Start the playlist again when it is shorter than the video"><input type="checkbox" id="mLoop"> Loop</label>
     </div>
+    <div class="mhead">
+      <button id="voiceFolder" title="Choose this track’s folder of recorded comments (mp3, m4a, wav…)">🎙 Voice folder</button>
+      <span id="voiceInfo"></span>
+      <span class="sp"></span>
+      <label title="Volume of the voice comments">Voice <input type="range" id="vVol" min="0" max="200"> <b id="vVolV"></b></label>
+      <label title="Music level while a comment plays (ducking)">Music under voice <input type="range" id="vDuck" min="0" max="100"> <b id="vDuckV"></b></label>
+      <label title="Time for the music to go down before a comment and back up after it (s)">Duck fade <input type="text" id="vFade"> s</label>
+    </div>
     <div id="mTLWrap"><canvas id="mTL"></canvas></div>
     <div id="mList"></div>
+    <div id="vList"></div>
+    <input type="file" id="voiceDirInput" webkitdirectory multiple hidden>
     <input type="file" id="musicDirInput" webkitdirectory multiple hidden>
   </div>
 </main>
@@ -1187,7 +1202,10 @@ function planBands(){
   }
 }
 function progressForDistance(dd){
+  // first moment the marker reaches dd. 5 cm tolerance: during a stop the
+  // marker sits at the stop's km give or take rounding, and must count as there
   let lo=0, hi=1;
+  dd -= 0.05;
   for (let k=0;k<40;k++){ const m=(lo+hi)/2; if (distAtProgress(m) < dd) lo=m; else hi=m; }
   return (lo+hi)/2;
 }
@@ -1309,6 +1327,7 @@ function camBearingAt(p){
 function computeCameraTrackSafe(){ if (track) computeCameraTrack(); }
 function rebuildMotion(){
   if (!track) return;
+  voiceVer++;
   if (playing) laReset(curT);
   computeHeadings(track);
   rebuildWarp();            // before the camera: it samples the warped timeline
@@ -2906,6 +2925,7 @@ function buildEntry(text, filename, saved){
     }).sort((a,b)=>a.d-b.d);
     e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
     e.music       = musicFromSaved(saved.music);
+    e.voice       = voiceFromSaved(saved.voice);
     e.mediaFolder = saved.mediaFolder || '';
     e.title     = saved.title ?? (g.name || '');
     e.subtitle  = saved.subtitle == null || isDefaultSubtitle(saved.subtitle, tk) ? defaultSubtitle(tk) : saved.subtitle;
@@ -2921,6 +2941,7 @@ function buildEntry(text, filename, saved){
     e.roads     = [];
     e.notes     = [];
     e.music     = musicFromSaved();
+    e.voice     = voiceFromSaved();
     e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
     e.subtitle  = defaultSubtitle(tk);
     e.endSubtitle = '';
@@ -3013,8 +3034,8 @@ function renderTrackList(){
     nm.textContent = t.title || t.gpxName; nm.title = t.gpxName;
     const mc  = document.createElement('span'); mc.className = 'mc';
     const nv = t.media.filter(m => m.kind === 'video').length, np = t.media.length - nv;
-    const na = t.music ? t.music.items.length : 0;
-    mc.textContent = [np ? `📷 ${np}` : '', nv ? `🎬 ${nv}` : '', na ? `🎵 ${na}` : ''].filter(Boolean).join(' ');
+    const na = t.music ? t.music.items.length : 0, nvo = t.voice ? t.voice.items.length : 0;
+    mc.textContent = [np ? `📷 ${np}` : '', nv ? `🎬 ${nv}` : '', na ? `🎵 ${na}` : '', nvo ? `🎙 ${nvo}` : ''].filter(Boolean).join(' ');
     mc.title = t.expectedMedia && !t.media.length ? `${t.expectedMedia} media file(s) referenced by the project: reload the folder${t.mediaFolder ? ' “' + t.mediaFolder + '”' : ''}` : (t.mediaFolder ? 'Folder: ' + t.mediaFolder : '');
     if (t.expectedMedia && !t.media.length) mc.textContent = `⚠ ${t.expectedMedia}`;
     const ds  = document.createElement('span'); ds.className = 'ds';
@@ -3164,6 +3185,7 @@ function buildProjectData(){
       notes: (t.notes || []).filter(noteHasText).map(n=>({ d:Math.round(n.d*100)/100, lat:Math.round(n.lat*1e7)/1e7, lon:Math.round(n.lon*1e7)/1e7,
                                                          style:n.style, title:n.title, text:n.text, dur:n.dur ?? null })),
       music: musicForSave(t),
+      voice: voiceForSave(t),
       // media are not embedded: only what can't be recovered from their files
       media: mediaMetaForSave(t)
     }))
@@ -4008,6 +4030,8 @@ function refreshTrackFromGpx(e, text){
   if (e.roads) e.roads.sort((a, b) => a.d - b.d);
   for (const n of e.notes || []){ const s = snapToTrack(n.lon, n.lat, tk); n.d = s.d; }
   if (e.notes) e.notes.sort((a, b) => a.d - b.d);
+  for (const it of (e.voice && e.voice.items) || []) if (it.d != null && Number.isFinite(it.lat)) it.d = snapToTrack(it.lon, it.lat, tk).d;
+  voiceVer++;
   if (wasDefaultSub) e.subtitle = defaultSubtitle(tk);
   if (+e.dur === defDur) e.dur = defaultDur(tk);
 }
@@ -4093,13 +4117,15 @@ async function openProjectDir(dir){
   rememberProjectDir(dir);
   const sync = projs.length ? await syncGpxFromDir(dir) : { updated:[], added:[], failed:[] };
   const r = await autoLoadMedia();
-  const nm = await autoLoadMusic(await listDirs(dir, 3));
+  const allDirs = await listDirs(dir, 3);
+  const nm = await autoLoadMusic(allDirs), nvo = await autoLoadVoice(allDirs);
   const missing = tracks.filter(t => t.expectedMedia && !t.media.length).length;
   toast(`Project “${dir.name}” opened · ${tracks.length} track(s)` +
         (sync.updated.length ? ` · GPX updated: ${sync.updated.map(t => t.gpxName).join(', ')}` : '') +
         (sync.added.length ? ` · new GPX: ${sync.added.join(', ')}` : '') +
         (r.files ? ` · ${r.files} photo(s)/video(s) reloaded for ${r.tracks} track(s)` : '') +
         (nm ? ` · music for ${nm} track(s)` : '') +
+        (nvo ? ` · voice comments for ${nvo} track(s)` : '') +
         (missing ? ` · ⚠ folder not found for ${missing} track(s)` : '') +
         (sync.failed.length ? ` · unreadable GPX: ${sync.failed[0]}` : ''), !!(missing || sync.failed.length));
   if (sync.updated.length || sync.added.length) $('#projectInfo').textContent += ' · modified, remember to save';
@@ -5018,7 +5044,7 @@ async function exportVideo(){
     }
     // soundtrack: mixed offline first, encoded to AAC (or Opus) once the frames are done
     let sound = null, acodec = null;
-    if (hasMusic()){
+    if (hasSound()){
       setExportUI(true, 0, 'Mixing the soundtrack…');
       acodec = await audioCodecFor(48000);
       if (!acodec) toast('This browser cannot encode audio: the MP4 will be silent.', true);
@@ -5160,7 +5186,7 @@ async function exportRealtime(fps, bitrate, frames){
   const stream = view.captureStream(fps);
   // soundtrack: played live into the recording
   let actx = null, adest = null;
-  if (hasMusic()){
+  if (hasSound()){
     await ensureMusicDecoded();
     actx = musicCtx(); await actx.resume().catch(() => {});
     adest = actx.createMediaStreamDestination();
@@ -5221,6 +5247,79 @@ function musicForSave(t){
 const curMusic = () => { const e = activeEntry(); return e ? (e.music || (e.music = musicFromSaved())) : null; };
 const hasMusic = (m = curMusic()) => !!(m && m.items.some(i => i.on && i.dur > 0.5));
 
+/* ---- voice comments ----
+   Recorded comments from the track's audio folder, placed freely on the
+   timeline. Each one is anchored to a km of the track plus an offset in
+   seconds (so it stays at its place when durations change, even inside a
+   photo stop, where the marker is still). While a comment plays, the music
+   is lowered automatically (ducking) and comes back up afterwards. */
+const VOICE_DEFAULTS = { vol:1, duck:0.25, duckFade:0.6 };
+const num0 = (x, d) => Number.isFinite(x) ? x : d;
+function voiceFromSaved(v){
+  v = v || {};
+  return { folder:v.folder || '', vol:num0(v.vol, VOICE_DEFAULTS.vol), duck:num0(v.duck, VOICE_DEFAULTS.duck),
+           duckFade:num0(v.duckFade, VOICE_DEFAULTS.duckFade), items:[], saved:Array.isArray(v.items) ? v.items : [] };
+}
+function voiceForSave(t){
+  const v = t.voice; if (!v) return null;
+  const items = v.items.length ? v.items.map(i => ({ name:i.name, on:i.on, vol:i.vol, d:i.d == null ? null : Math.round(i.d*100)/100,
+      off:i.off == null ? null : Math.round(i.off*1000)/1000, lat:i.lat ?? null, lon:i.lon ?? null })) : v.saved;
+  return { folder:v.folder, vol:v.vol, duck:v.duck, duckFade:v.duckFade, items };
+}
+const curVoice = () => { const e = activeEntry(); return e ? (e.voice || (e.voice = voiceFromSaved())) : null; };
+const hasVoice = (v = curVoice()) => !!(v && v.items.some(i => i.on && i.d != null && i.dur > 0.05));
+const hasSound = () => hasMusic() || hasVoice();
+/* video time of an anchor, and the anchor of a video time */
+const anchorTime = it => TL.intro + progressForDistance(it.d)*TL.travel + (it.off || 0);
+function anchorAt(t){
+  t = clamp(t, 0, TL.total);
+  const f = frameAt(t), d = f.phase === 'intro' ? 0 : f.phase === 'outro' ? track.total : f.d, st = stateAt(track, d);
+  return { d, off:t - (TL.intro + progressForDistance(d)*TL.travel), lat:st.lat, lon:st.lon };
+}
+var voiceVer = 0, voiceMemo = null;   // var: bumped by rebuildMotion, which may run before this script
+function voicePlan(v = curVoice()){
+  if (!v || !track) return [];
+  if (voiceMemo && voiceMemo.v === v && voiceMemo.ver === voiceVer && voiceMemo.warp === warp && voiceMemo.T === TL.total && voiceMemo.tr === TL.travel)
+    return voiceMemo.plan;
+  const plan = v.items.filter(i => i.on && i.d != null && i.dur > 0.05)
+    .map(it => { const start = clamp(anchorTime(it), 0, TL.total); return { it, start, end:start + it.dur }; })
+    .filter(p => p.start < TL.total).sort((a, b) => a.start - b.start);
+  voiceMemo = { v, ver:voiceVer, warp, T:TL.total, tr:TL.travel, plan };
+  return plan;
+}
+/* Music level at video time t: lowered to v.duck while a comment plays. */
+function duckAt(t, vp = voicePlan()){
+  const v = curVoice(); if (!v || !vp.length) return 1;
+  const F = Math.max(0.05, v.duckFade); let k = 0;
+  for (const p of vp){
+    if (t < p.start - F || t > p.end + F) continue;
+    k = Math.max(k, t < p.start ? (t - (p.start - F))/F : t > p.end ? ((p.end + F) - t)/F : 1);
+  }
+  k = Math.sin(Math.PI/2 * clamp(k, 0, 1));
+  return 1 - k*(1 - v.duck);
+}
+function scheduleVoice(ctx, dest, fromT, when0){
+  const v = curVoice(), nodes = [];
+  if (!v) return nodes;
+  for (const p of voicePlan(v)){
+    const endT = Math.min(p.end, TL.total);
+    if (endT <= fromT + 0.01 || !p.it.buf) continue;
+    const t0 = Math.max(fromT, p.start), dur = endT - t0, g = ctx.createGain(), src = ctx.createBufferSource();
+    src.buffer = p.it.buf;
+    const N = Math.max(2, Math.ceil(dur*40)), curve = new Float32Array(N), E = 0.03;
+    for (let i = 0; i < N; i++){
+      const t = t0 + dur*i/(N-1), a = t - p.start, b = p.end - t;
+      curve[i] = v.vol * (p.it.vol ?? 1) * clamp(a/E, 0, 1) * clamp(b/E, 0, 1);
+    }
+    g.gain.value = curve[0];
+    g.gain.setValueCurveAtTime(curve, when0 + (t0 - fromT), dur);
+    src.connect(g).connect(dest);
+    src.start(when0 + (t0 - fromT), t0 - p.start, dur);
+    nodes.push(src);
+  }
+  return nodes;
+}
+
 /* ---- plan: when each song plays, with its fades ---- */
 function musicPlan(m = curMusic()){
   if (!m) return [];
@@ -5242,9 +5341,9 @@ function musicPlan(m = curMusic()){
   return out;
 }
 /* Gain of a planned song at video time t: volumes × equal-power fades. */
-function segGain(m, s, t){
+function segGain(m, s, t, vp){
   if (t < s.start || t > s.end) return 0;
-  let g = m.vol * (s.it.vol ?? 1);
+  let g = m.vol * (s.it.vol ?? 1) * duckAt(t, vp);
   const a = t - s.start, b = s.end - t, T = TL.total;
   if (s.fin > 0 && a < s.fin) g *= Math.sin(Math.PI/2 * a/s.fin);
   if (s.fout > 0 && b < s.fout) g *= Math.sin(Math.PI/2 * b/s.fout);
@@ -5253,7 +5352,7 @@ function segGain(m, s, t){
 }
 /* Schedules the soundtrack from video time fromT at audio time when0. */
 function scheduleMusic(ctx, dest, m, fromT, when0){
-  const nodes = [], T = TL.total;
+  const nodes = scheduleVoice(ctx, dest, fromT, when0), T = TL.total, vp = voicePlan();
   for (const s of musicPlan(m)){
     const endT = Math.min(s.end, T);
     if (endT <= fromT + 0.01 || !s.it.buf) continue;
@@ -5261,7 +5360,7 @@ function scheduleMusic(ctx, dest, m, fromT, when0){
     const src = ctx.createBufferSource(), g = ctx.createGain();
     src.buffer = s.it.buf;
     const N = Math.max(2, Math.ceil(dur*40)), curve = new Float32Array(N);
-    for (let i = 0; i < N; i++) curve[i] = segGain(m, s, t0 + dur*i/(N-1));
+    for (let i = 0; i < N; i++) curve[i] = segGain(m, s, t0 + dur*i/(N-1), vp);
     g.gain.value = curve[0];
     g.gain.setValueCurveAtTime(curve, when0 + (t0 - fromT), dur);
     src.connect(g).connect(dest);
@@ -5304,6 +5403,8 @@ async function decodeItem(it){
 /* Decodes what the plan needs; durations can shift slightly once decoded,
    so we go round until the set of needed songs is stable. */
 async function ensureMusicDecoded(m = curMusic()){
+  await Promise.all(voicePlan().map(p => decodeItem(p.it)));
+  if (!m) return;
   for (let pass = 0; pass < 4; pass++){
     const need = [...new Set(musicPlan(m).filter(s => s.start < TL.total).map(s => s.it))].filter(i => !i.buf && !i.bad);
     if (!need.length) return;
@@ -5319,7 +5420,7 @@ function releaseMusic(m){
 async function musicStart(){
   musicStop();
   const m = curMusic();
-  if (!hasMusic(m) || !playing) return;
+  if (!hasSound() || !playing) return;
   const ctx = musicCtx();
   await ctx.resume().catch(() => {});
   await ensureMusicDecoded(m);
@@ -5345,7 +5446,7 @@ function setMuted(v){
 /* ---- export: the whole soundtrack, rendered offline ---- */
 async function renderSoundtrack(sampleRate = 48000){
   const m = curMusic();
-  if (!hasMusic(m)) return null;
+  if (!hasSound()) return null;
   await ensureMusicDecoded(m);
   const off = new OfflineAudioContext(2, Math.ceil(TL.total*sampleRate), sampleRate);
   scheduleMusic(off, off.destination, m, 0, 0);
@@ -5427,12 +5528,17 @@ async function pickMusicFolder(){
   const n = await loadMusic(e, files, dir, rel ? rel.join('/') : dir.name);
   toast(`${n} song(s) for “${e.title || e.gpxName}”` + (projectDir && !rel ? ` — tip: put “${dir.name}” inside the project folder so it reloads automatically` : ''));
 }
+/* Folders: music under music/ (or musique, songs, soundtrack…), voice
+   comments under audio/ (or voice, voix, comments, narration…). */
+const VOICE_DIR_RE = /(^|\/)(audio|audios|voice|voices|voix|comments?|commentaires?|narration|vo)(\/|$)/i;
+const MUSIC_DIR_RE = /(^|\/)(music|musics|musique|musiques|songs?|soundtrack|playlist)(\/|$)/i;
 /* On opening a project: the folder noted in the project, otherwise a folder
-   bearing the track's name or date that contains audio files (a folder under
-   “music” / “audio” wins over one that happens to hold a stray mp3). */
+   bearing the track's name or date that contains audio files — never one
+   under audio/ (those are voice comments), and one under music/ wins. */
 async function autoLoadMusic(dirs){
   let n = 0;
-  const musicy = d => /music|musique|audio|sound|son/i.test(d.path.join('/')) ? 1 : 0;
+  dirs = dirs.filter(d => !VOICE_DIR_RE.test(d.path.join('/')));
+  const musicy = d => MUSIC_DIR_RE.test(d.path.join('/')) ? 1 : 0;
   for (const t of tracks){
     const m = t.music || (t.music = musicFromSaved());
     if (m.items.length) continue;
@@ -5447,9 +5553,91 @@ async function autoLoadMusic(dirs){
   return n;
 }
 
+async function loadVoice(e, files, dir, rel){
+  files = [...files].filter(f => AUDIO_RE.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric:true }));
+  const v = e.voice || (e.voice = voiceFromSaved());
+  for (const it of v.items){ it.buf = null; it.peaks = null; it.decoding = null; }
+  const saved = new Map((v.items.length ? v.items : v.saved).map(x => [x.name, x]));
+  v.items = await Promise.all(files.map(async f => {
+    const x = saved.get(f.name) || {};
+    return { name:f.name, file:f, dur:await audioDuration(f), on:x.on ?? true, vol:x.vol ?? 1,
+             d:Number.isFinite(x.d) ? x.d : null, off:Number.isFinite(x.off) ? x.off : 0, lat:x.lat ?? null, lon:x.lon ?? null };
+  }));
+  v.saved = []; if (rel != null) v.folder = rel;
+  voiceVer++;
+  if (e === activeEntry()){ renderMusicPanel(); musicRestart(); }
+  renderTrackList();
+  return v.items.length;
+}
+async function pickVoiceFolder(){
+  const e = activeEntry();
+  if (!e){ toast('Load a GPX track first.', true); return; }
+  if (!HAS_FSA){ $('#voiceDirInput').click(); return; }
+  let dir;
+  try { dir = await showDirectoryPicker({ id:'gpxcine-voice', mode:'read', startIn: projectDir || 'music' }); }
+  catch(err){ if (err.name !== 'AbortError') toast('Folder not accessible: ' + err.message, true); return; }
+  const files = await audioFilesFromHandle(dir);
+  if (!files.length){ toast(`No audio files (mp3, m4a, wav…) in “${dir.name}”.`, true); return; }
+  const rel = projectDir ? await projectDir.resolve(dir) : null;
+  const n = await loadVoice(e, files, dir, rel ? rel.join('/') : dir.name);
+  toast(`${n} voice comment(s) for “${e.title || e.gpxName}” — drag them onto the VOICE lane of the timeline, or “⤓ Here” to place one at the playhead.`);
+}
+async function autoLoadVoice(dirs){
+  let n = 0;
+  for (const t of tracks){
+    const v = t.voice || (t.voice = voiceFromSaved());
+    if (v.items.length) continue;
+    const cands = [];
+    if (v.folder){ try { cands.push({ h:await dirAtPath(projectDir, v.folder), path:v.folder.split('/') }); } catch(e){} }
+    cands.push(...dirs.filter(d => trackMatchesName(t, d.h.name) && VOICE_DIR_RE.test(d.path.join('/'))));
+    for (const c of cands){
+      const fs = await audioFilesFromHandle(c.h);
+      if (fs.length){ await loadVoice(t, fs, c.h, c.path.join('/')); n++; break; }
+    }
+  }
+  return n;
+}
+function renderVoiceList(){
+  const box = $('#vList'), v = curVoice(); if (!box) return;
+  $('#vVol').value = Math.round((v ? v.vol : 1)*100); $('#vVolV').textContent = $('#vVol').value + '%';
+  $('#vDuck').value = Math.round((v ? v.duck : VOICE_DEFAULTS.duck)*100); $('#vDuckV').textContent = $('#vDuck').value + '%';
+  $('#vFade').value = fmt(v ? v.duckFade : VOICE_DEFAULTS.duckFade, 1);
+  $('#voiceInfo').textContent = !v || !v.items.length
+    ? (v && v.saved.length ? `⚠ ${v.saved.length} comment(s) in the project: choose the folder${v.folder ? ' “' + v.folder + '”' : ''} again` : 'No voice comments yet.')
+    : `${v.items.length} comment(s) · ${v.items.filter(i => i.d != null).length} placed` + (v.folder ? ` · folder “${v.folder}”` : '');
+  box.innerHTML = '';
+  (v ? v.items : []).forEach((it, i) => {
+    const row = document.createElement('div');
+    row.className = 'mrow vrow' + (i === voiceSel ? ' sel' : '') + (it.on ? '' : ' off');
+    row.draggable = true;
+    const placed = it.d != null, t = placed ? anchorTime(it) : 0;
+    row.innerHTML = `<span class="grip" title="Drag onto the VOICE lane of the timeline">🎙</span>
+      <input type="checkbox" title="Use this comment" ${it.on ? 'checked' : ''}>
+      <span class="nm"></span>
+      <span class="du">${it.bad ? 'unreadable' : fmtS(it.dur)}</span>
+      <span class="at">${placed ? `▶ ${mmss(t)} · km ${fmt(U.dist(it.d).v, 1)}` : 'not placed'}</span>
+      <button class="here" title="Place at the playhead">⤓ Here</button>
+      <label title="Comment volume">Vol <input type="range" class="v" min="0" max="200" value="${Math.round((it.vol ?? 1)*100)}"><b>${Math.round((it.vol ?? 1)*100)}%</b></label>
+      <button class="go" title="Go to this comment" ${placed ? '' : 'disabled'}>▸</button>
+      <button class="un" title="Take it off the timeline" ${placed ? '' : 'disabled'}>✕</button>`;
+    row.querySelector('.nm').textContent = it.name.replace(/\.[^.]+$/, ''); row.querySelector('.nm').title = it.name;
+    const upd = () => { voiceVer++; renderMusicPanel(); musicRestart(); };
+    row.querySelector('input[type=checkbox]').onchange = ev => { it.on = ev.target.checked; upd(); };
+    row.querySelector('.here').onclick = () => { Object.assign(it, anchorAt(curT)); voiceSel = i; upd(); };
+    row.querySelector('.go').onclick = () => { setPlaying(false); curT = clamp(anchorTime(it), 0, TL.total); voiceSel = i; renderPreview(); renderMusicPanel(); };
+    row.querySelector('.un').onclick = () => { it.d = null; upd(); };
+    const vr = row.querySelector('.v');
+    vr.oninput = () => { it.vol = vr.value/100; vr.nextElementSibling.textContent = vr.value + '%'; };
+    vr.onchange = () => upd();
+    row.onclick = ev => { if (ev.target.closest('input,button,label')) return; voiceSel = i; renderMusicPanel(); };
+    row.ondragstart = ev => { ev.dataTransfer.setData('text/plain', 'voice:' + i); ev.dataTransfer.effectAllowed = 'copyMove'; };
+    box.appendChild(row);
+  });
+}
+
 /* ---- the 🎵 Soundtrack tab ---- */
 const MUSIC_COLORS = ['#5b9df0', '#e0823d', '#58c08a', '#c878e0', '#e0c24a', '#e0607a', '#4ac6d0'];
-let musicSel = -1, mtl = null;             // selected song, timeline cache
+let musicSel = -1, voiceSel = -1, mtl = null;   // selected song / comment, timeline cache
 function renderMusicPanel(){
   const m = curMusic(), box = $('#mList');
   if (!box) return;
@@ -5514,8 +5702,11 @@ function renderMusicPanel(){
       : `The music covers the whole video (${mmss(T)}), with a ${fmt(m.endFade, 1)} s fade-out at the end.`;
     box.appendChild(note);
   }
+  renderVoiceList();
   drawMusicTimeline(true);
   ensureMusicDecoded(m).then(() => { if (tab === 'music' && curMusic() === m) drawMusicTimeline(true); });
+  const v = curVoice();
+  if (v) Promise.all(v.items.map(decodeItem)).then(() => { if (tab === 'music' && curVoice() === v) drawMusicTimeline(true); });
 }
 /* Timeline: ruler, the video (intro / route / outro, photo and clip stops,
    waypoints), then the songs on two alternating lanes so that crossfades
@@ -5523,13 +5714,14 @@ function renderMusicPanel(){
 function drawMusicTimeline(rebuild){
   const cv = $('#mTL'); if (!cv || tab !== 'music') return;
   const dpr = devicePixelRatio || 1;
-  const Wc = Math.max(200, cv.parentElement.clientWidth), Hc = 30 + 50 + 8 + 2*50;
+  const Wc = Math.max(200, cv.parentElement.clientWidth), Hc = 30 + 50 + 8 + 2*50 + 52;
   if (cv.width !== Math.round(Wc*dpr) || cv.height !== Math.round(Hc*dpr)){
     cv.width = Math.round(Wc*dpr); cv.height = Math.round(Hc*dpr); rebuild = true;
   }
   const T = TL.total, m = curMusic();
   const sig = [T, TL.intro, TL.outro, photoPlan.length, notePlan.map(e => e.t0).join(), bandPlan.map(e => e.t0 + ':' + e.t1).join(), Wc, m && m.vol, m && m.xfade, m && m.endFade, m && m.loop,
                m && m.items.map(i => [i.name, i.on, i.vol, i.fin, i.fout, !!i.peaks, i.dur]).join(), musicSel,
+               voiceVer, voiceSel, curVoice() && curVoice().items.map(i => !!i.peaks).join(), warp && warp.extra,
                document.documentElement.dataset.theme].join('|');
   if (rebuild || !mtl || mtl.sig !== sig){
     const base = document.createElement('canvas');
@@ -5587,6 +5779,7 @@ function drawMusicTimeline(rebuild){
       g.fillStyle = muted; g.font = '12px system-ui';
       g.fillText(m && m.items.length ? 'No song enabled.' : 'No music: choose this track’s music folder (📁 Music folder).', 16, ly[0] + 26);
     }
+    const vp = voicePlan();
     plan.forEach((s, i) => {
       if (s.start >= T) return;
       const y = ly[i % 2], a = X(s.start), b = X(Math.min(s.end, T)), idx = m.items.indexOf(s.it);
@@ -5599,20 +5792,44 @@ function drawMusicTimeline(rebuild){
         for (let x = Math.floor(a); x < b; x++){
           const tt = Tt(x), j = Math.floor((tt - s.start) / s.it.dur * n);
           if (j < 0 || j >= n) continue;
-          const amp = pk[j] * Math.min(1.5, segGain(m, s, tt)) / 1.5 * (lh/2 - 3);
+          const amp = pk[j] * Math.min(1.5, segGain(m, s, tt, vp)) / 1.5 * (lh/2 - 3);
           g.fillRect(x, y + lh/2 - amp, 1, Math.max(1, 2*amp));
         }
       } else { g.fillStyle = muted; g.font = '10px system-ui'; g.fillText(s.it.bad ? 'unreadable' : 'decoding…', a + 6, y + lh - 6); }
       g.strokeStyle = txt; g.lineWidth = 1.2; g.beginPath();          // volume envelope
       for (let x = Math.floor(a); x <= b; x += 2){
-        const v = Math.min(1.5, segGain(m, s, Tt(x))) / 1.5, yy = y + lh - 2 - v*(lh - 4);
+        const v = Math.min(1.5, segGain(m, s, Tt(x), vp)) / 1.5, yy = y + lh - 2 - v*(lh - 4);
         x === Math.floor(a) ? g.moveTo(x, yy) : g.lineTo(x, yy);
       }
       g.stroke();
       g.fillStyle = txt; g.font = '600 10px system-ui'; g.fillText(`${idx + 1} · ${s.it.name.replace(/\.[^.]+$/, '')}`, a + 6, y + 12);
       g.restore();
     });
-    mtl = { sig, base, X, Tt, plan, ly, lh, Wc, Hc };
+    // voice lane
+    const vly = ly[1] + 52, vc = '#f06292', vo = curVoice();
+    g.fillStyle = line; g.fillRect(8, vly + lh/2, Wc - 16, 1);
+    g.fillStyle = muted; g.font = '600 10px system-ui'; g.textAlign = 'left'; g.fillText('VOICE', 10, vly + 12);
+    if (!vp.length){
+      g.font = '11px system-ui';
+      g.fillText(vo && vo.items.length ? 'Drag a comment from the list below onto this lane (or “⤓ Here”).' : 'No voice comments: choose this track’s audio folder (🎙 Voice folder).', 60, vly + 27);
+    }
+    for (const p of vp){
+      const a = X(p.start), b = X(Math.min(p.end, T)), sel = vo.items.indexOf(p.it) === voiceSel;
+      g.fillStyle = vc + '38'; g.strokeStyle = sel ? txt : vc; g.lineWidth = sel ? 2 : 1;
+      g.beginPath(); if (g.roundRect) g.roundRect(a, vly, Math.max(4, b - a), lh, 6); else g.rect(a, vly, Math.max(4, b - a), lh); g.fill(); g.stroke();
+      g.save(); g.beginPath(); g.rect(a, vly, b - a, lh); g.clip();
+      if (p.it.peaks){
+        const pk = p.it.peaks, n = pk.length; g.fillStyle = vc + 'dd';
+        for (let x = Math.floor(a); x < b; x++){
+          const j = Math.floor((Tt(x) - p.start) / p.it.dur * n); if (j < 0 || j >= n) continue;
+          const amp = Math.min(1, pk[j] * (vo.vol * (p.it.vol ?? 1))) * (lh/2 - 3);
+          g.fillRect(x, vly + lh/2 - amp, 1, Math.max(1, 2*amp));
+        }
+      }
+      g.fillStyle = txt; g.font = '600 10px system-ui'; g.fillText('🎙 ' + p.it.name.replace(/\.[^.]+$/, ''), a + 5, vly + 12);
+      g.restore();
+    }
+    mtl = { sig, base, X, Tt, plan, ly, lh, Wc, Hc, vly, vp };
   }
   const c = cv.getContext('2d');
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height); c.drawImage(mtl.base, 0, 0);
@@ -5630,9 +5847,18 @@ function initMusicTab(){
     if (playing){ laReset(curT); musicRestart(); } else renderPreview();
     drawMusicTimeline();
   };
+  let vdrag = null;
   cv.addEventListener('pointerdown', ev => {
     if (!track) return;
     const t = tAt(ev);
+    if (mtl){                               // a voice comment: drag it along the timeline
+      const y = ev.clientY - cv.getBoundingClientRect().top;
+      const p = y >= mtl.vly && y <= mtl.vly + mtl.lh && mtl.vp.find(p => t >= p.start && t <= p.end);
+      if (p){
+        vdrag = { it:p.it, grab:t - p.start, moved:false }; voiceSel = curVoice().items.indexOf(p.it);
+        cv.setPointerCapture(ev.pointerId); drawMusicTimeline(true); return;
+      }
+    }
     if (mtl){                               // click on a song block: select it too
       const y = ev.clientY - cv.getBoundingClientRect().top;
       const hit = mtl.plan.findIndex((s, i) => t >= s.start && t <= s.end && y >= mtl.ly[i % 2] && y <= mtl.ly[i % 2] + mtl.lh);
@@ -5640,8 +5866,26 @@ function initMusicTab(){
     }
     drag = true; cv.setPointerCapture(ev.pointerId); seek(t);
   });
-  cv.addEventListener('pointermove', ev => { if (drag) seek(tAt(ev)); });
-  cv.addEventListener('pointerup', () => { drag = false; });
+  cv.addEventListener('pointermove', ev => {
+    if (vdrag){
+      Object.assign(vdrag.it, anchorAt(clamp(tAt(ev) - vdrag.grab, 0, TL.total - 0.1)));
+      vdrag.moved = true; voiceVer++; drawMusicTimeline(true); return;
+    }
+    if (drag) seek(tAt(ev));
+  });
+  cv.addEventListener('pointerup', () => {
+    if (vdrag){ const m = vdrag.moved; vdrag = null; renderMusicPanel(); if (m) musicRestart(); return; }
+    drag = false;
+  });
+  cv.addEventListener('dragover', ev => { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; });
+  cv.addEventListener('drop', ev => {
+    ev.preventDefault();
+    const data = ev.dataTransfer.getData('text/plain'), v = curVoice();
+    if (!v || !/^voice:\d+$/.test(data)) return;
+    const it = v.items[+data.slice(6)]; if (!it || !track) return;
+    Object.assign(it, anchorAt(tAt(ev))); voiceSel = v.items.indexOf(it); voiceVer++;
+    renderMusicPanel(); musicRestart();
+  });
   const setting = (id, key, parse) => $('#'+id).addEventListener('change', () => {
     const m = curMusic(); if (!m) return;
     m[key] = parse($('#'+id)); renderMusicPanel(); musicRestart();
@@ -5656,6 +5900,22 @@ function initMusicTab(){
   });
   $('#mVol').addEventListener('change', musicRestart);
   $('#musicFolder').onclick = pickMusicFolder;
+  $('#voiceFolder').onclick = pickVoiceFolder;
+  const vset = (id, fn) => $('#'+id).addEventListener('input', () => { const v = curVoice(); if (!v) return; fn(v); voiceVer++; drawMusicTimeline(true); });
+  vset('vVol', v => { v.vol = $('#vVol').value/100; $('#vVolV').textContent = $('#vVol').value + '%'; });
+  vset('vDuck', v => { v.duck = $('#vDuck').value/100; $('#vDuckV').textContent = $('#vDuck').value + '%'; });
+  $('#vVol').addEventListener('change', musicRestart); $('#vDuck').addEventListener('change', musicRestart);
+  $('#vFade').addEventListener('change', () => {
+    const v = curVoice(); if (!v) return;
+    const x = parseFloat($('#vFade').value.replace(',', '.')); v.duckFade = Number.isFinite(x) ? clamp(x, 0.05, 5) : VOICE_DEFAULTS.duckFade;
+    voiceVer++; renderMusicPanel(); musicRestart();
+  });
+  $('#voiceDirInput').onchange = async ev => {
+    const e = activeEntry(); if (!e) return;
+    const files = [...ev.target.files]; ev.target.value = '';
+    const rel = files[0] && files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : '';
+    toast(`${await loadVoice(e, files, null, rel)} voice comment(s) for “${e.title || e.gpxName}”`);
+  };
   $('#musicDirInput').onchange = async ev => {
     const e = activeEntry(); if (!e) return;
     const files = [...ev.target.files]; ev.target.value = '';

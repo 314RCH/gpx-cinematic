@@ -279,6 +279,35 @@ The music is mixed into the exported MP4 as a 48 kHz stereo AAC track. The
 order, volumes, fades and settings are saved in the project; the audio files
 stay in their folder.
 
+### Voice comments
+
+Recorded comments (mp3, m4a, wav…) sit in their own folder per track, for
+example `audio/20260816/` — **🎙 Voice folder** in the 🎵 Soundtrack tab, or
+found automatically when the project is opened (a folder named after the
+track under `audio/`, `voice/`, `voix/`, `comments/`, `narration/`; music is
+never taken from those folders, and comments never from `music/`).
+
+- **Placing**: drag a comment from the list onto the **VOICE** lane of the
+  timeline, or put the playhead where it should start and click **⤓ Here**.
+  Drag a block on the lane to move it; ✕ takes it off the timeline, ▸ jumps
+  to it. A new comment is not placed until you do so.
+- **Anchoring**: each comment is tied to a km of the track plus an offset
+  in seconds, so it stays at its place when the route duration, the photos
+  or the notes change — including inside a photo stop, where the marker is
+  still (tested: the offset from the start of the photo is kept to within
+  10 ms whatever the duration).
+- **Ducking**: while a comment plays, the music goes down automatically to
+  **Music under voice** (25 % by default, i.e. −12 dB), over **Duck fade**
+  seconds before the comment, and comes back up the same way afterwards.
+  The music’s volume envelope on the timeline shows these dips.
+- **Volumes**: **Voice** for all comments (up to 200 %), and a volume per
+  comment in the list.
+
+Comments play in the preview and are mixed into the exported MP4 with the
+music. Their placement, volumes and settings are saved in the project and
+follow the track if its GPX is updated. The track list shows 🎙 with the
+number of comments.
+
 ## Project
 
 **One project = one folder**, for example:
@@ -290,8 +319,11 @@ replay/
 ├── photos/
 │   ├── 20260815/                 photos and videos from 15 August
 │   └── 20260816/
-└── music/
-    ├── 20260815/                 the soundtrack of 15 August (mp3, m4a, wav…)
+├── music/
+│   ├── 20260815/                 the soundtrack of 15 August (mp3, m4a, wav…)
+│   └── 20260816/
+└── audio/
+    ├── 20260815/                 recorded voice comments of 15 August
     └── 20260816/
 ```
 
@@ -322,8 +354,8 @@ replay/
   exact location, color), start/finish, settings, active track, and for each
   media item its hand-placed location, its inclusion choice and, for a video,
   its edit (segments, transitions, transition duration), plus each track’s
-  roads, notes and soundtrack (music folder, order, volumes, fades, crossfade, end
-  fade-out, loop). The photo, video and audio files themselves stay in their
+  roads, notes, soundtrack (music folder, order, volumes, fades, crossfade, end
+  fade-out, loop) and voice comments (folder, placement, volumes, ducking). The photo, video and audio files themselves stay in their
   folders.
 - Opening and saving to a folder require Chrome or Edge. Elsewhere: a `.json`
   file is opened, saving is done by download, and media folders must be
