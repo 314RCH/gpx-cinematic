@@ -13,6 +13,7 @@
 </script>
 <title>GPX Cinematic — video animation of GPX tracks</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap">
 <style>
 :root{
   --bg:#0c0f14; --panel:#131822; --panel2:#1a2130; --line:#26304180;
@@ -282,6 +283,19 @@ body.tab-music #musicPanel{display:flex}
 .mrow button{width:auto;margin:0;padding:2px 6px;font-size:10px}
 .mnote{font-size:11.5px;color:var(--muted);padding:2px 4px}
 #transport #mute{font-size:14px}
+#noteList{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+#noteList li{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:5px}
+#noteList li.cur{border-color:var(--selLine)}
+#noteList .nr{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted)}
+#noteList select{width:auto;margin:0;padding:2px 4px;font-size:11.5px}
+#noteList input{margin:0;padding:3px 6px;font-size:12px}
+#noteList input.km{width:58px;text-align:right}
+#noteList input.du{width:66px;text-align:right}
+#noteList .sp{flex:1}
+#noteList textarea{width:100%;margin:0;min-height:46px;resize:vertical;font:15px/1.3 Caveat, "Bradley Hand", cursive;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+#noteList input.ti{font:600 16px Caveat, "Bradley Hand", cursive}
+#noteList .go,#noteList .del{width:auto;padding:2px 6px;color:var(--muted);border-color:transparent;background:transparent}
+#noteList .del:hover{color:var(--err);background:#f871711a}
 #themeBtn{position:absolute;top:12px;right:14px;width:auto;margin:0;padding:3px 9px;font-size:11.5px;color:var(--muted)}
 </style>
 </head>
@@ -404,6 +418,16 @@ body.tab-music #musicPanel{display:flex}
     </div>
     <ul id="roadList"></ul>
     <p class="hint">Each row gives the road followed <b>from this km</b> until the next row. Put the playhead where the road changes, then “+ At playhead”. Type <code>1 · Hringvegur</code> or <code>D902 · Col du Galibier</code>: the number is shown in a badge. Empty name: nothing is shown on that section.</p>
+  </section>
+
+  <section class="grp">
+    <h3>Notes</h3>
+    <div class="row">
+      <button id="noteHere" title="New note at the playhead position">+ At playhead</button>
+      <button id="noteGap" title="Move the playhead to the next stretch of the route with no photo, clip or note">⇥ Next gap</button>
+    </div>
+    <ul id="noteList"></ul>
+    <p class="hint">Your own words, in travel-journal style. A <b>caption</b> shows as a paper strip while the marker keeps moving; a <b>story card</b> fills the screen on notebook paper and stops the marker while it is read. The reading time is set from the length of the text (leave the duration empty) or typed in. Notes never overlap a photo stop.</p>
   </section>
 
   <section class="grp">
@@ -1052,11 +1076,12 @@ function distAtProgress(p){
 --------------------------------------------------------------------------- */
 let photoPlan = [];       // [{ photo, d, t0, t1 }] in seconds of travel
 const STOP_RAMP = 0.4;    // base time consumed by braking (and restart); actual duration ×2
+let notePlan = [], bandPlan = [];   // story cards (marker stopped) and caption strips, in seconds of travel
 function rebuildWarp(){
-  warp = null; photoPlan = [];
+  warp = null; photoPlan = []; notePlan = []; bandPlan = [];
   if (!track) return;
-  const links = includedPhotoLinks();
-  if (!links.length) return;
+  const links = includedPhotoLinks(), cards = activeNotes().filter(n => n.style === 'card');
+  if (!links.length && !cards.length){ planBands(); return; }
   const dur = Math.max(1, +$('#photoDur').value || 3.5), slow = $('#photoSlow').checked;
   const itemDur = p => p.kind === 'video' ? clipLen(p) : dur;
   const feature = $('#photoStyle').value !== 'frame';
@@ -1076,61 +1101,89 @@ function rebuildWarp(){
     return lerp(bD[i], bD[i+1], x-i);
   };
 
+  // photo groups, then one stop per story card
   const clusters = [];
   for (const l of links){
     const s = baseTimeAtD(l.d), c = clusters[clusters.length-1];
     if (c && (l.d - c.dmax <= 150 || s - c.smax < 1)){ c.items.push(l); c.dmax = l.d; c.smax = s; }
-    else clusters.push({ items:[l], dmin:l.d, dmax:l.d, s, smax:s });
+    else clusters.push({ kind:'photo', items:[l], dmin:l.d, dmax:l.d, s, smax:s });
   }
   for (const c of clusters){
     c.span = c.items.reduce((sum, l) => sum + itemDur(l.photo), 0);   // display time of the group
     c.hold = slow ? c.span + 2*fade : 0;                              // marker stopped
   }
+  for (const n of cards){
+    const sp = noteDur(n), s0 = baseTimeAtD(n.d);
+    clusters.push({ kind:'note', note:n, dmin:n.d, dmax:n.d, s:s0, smax:s0, span:sp, hold:sp + 2*CARD_FADE });
+  }
+  clusters.sort((a, b) => a.s - b.s || (a.kind === 'note') - (b.kind === 'note'));
+  const stops = clusters.filter(c => c.hold > 0);
 
-  if (!slow){
-    // no stop: the media play around the marker's passage
-    let cursor = 0.3;
-    for (const c of clusters){
-      let t = Math.max(cursor, (c.s + baseTimeAtD(c.dmax))/2 - c.span/2);
+  if (stops.length){
+    // ramps: shortened if two stops (or the start / finish) are too close
+    stops.forEach((c, k) => {
+      const before = k ? c.s - stops[k-1].s : c.s, after = k < stops.length-1 ? stops[k+1].s - c.s : tB - c.s;
+      c.r = Math.max(0, Math.min(STOP_RAMP, before/2, after/2));
+    });
+    // t (actual travel time) → s (base time)
+    const extra = stops.reduce((sum, c) => sum + c.hold + 2*c.r, 0);
+    const sAt = t => {
+      let off = 0;
+      for (const c of stops){
+        const a = c.s - c.r + off;                     // start of braking
+        if (t < a) break;
+        const u1 = c.r ? (t - a)/(2*c.r) : 1;
+        if (u1 < 1) return c.s - c.r + c.r*(u1 + Math.sin(Math.PI*u1)/Math.PI);
+        const h = t - a - 2*c.r;
+        if (h < c.hold) return c.s;
+        const u2 = c.r ? (h - c.hold)/(2*c.r) : 1;
+        if (u2 < 1) return c.s + c.r*(u2 - Math.sin(Math.PI*u2)/Math.PI);
+        off += c.hold + 2*c.r;
+      }
+      return t - off;
+    };
+    const total = tB + extra, N = Math.max(M, Math.ceil(total*40));
+    const T = new Float64Array(N+1), D = new Float64Array(N+1);
+    for (let j=0; j<=N; j++){ T[j] = j/N*total; D[j] = baseDistAtT(sAt(T[j])); }
+    warp = { t:T, d:D, extra, clusters:stops };
+  }
+
+  // timing: during a stop, media are chained (fly-in included) and a story
+  // card is shown; without a stop, photos play around the marker's passage
+  let off = 0, cursor = 0.3;
+  for (const c of clusters){
+    if (c.hold > 0){
+      const start = c.s - c.r + off + 2*c.r;
+      if (c.kind === 'note') notePlan.push({ note:c.note, d:c.dmin, t0:start + CARD_FADE, t1:start + CARD_FADE + c.span });
+      else {
+        let t = start + fade;
+        c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:c.items.length }); t += du; });
+      }
+      off += c.hold + 2*c.r;
+    } else {
+      let t = Math.max(cursor, (c.s + baseTimeAtD(c.dmax))/2 + off - c.span/2);
       c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:c.items.length }); t += du; });
       cursor = t;
     }
-    return;
   }
-
-  // ramps: shortened if two stops (or the start / finish) are too close
-  clusters.forEach((c, k) => {
-    const before = k ? c.s - clusters[k-1].s : c.s, after = k < clusters.length-1 ? clusters[k+1].s - c.s : tB - c.s;
-    c.r = Math.max(0, Math.min(STOP_RAMP, before/2, after/2));
-  });
-  // t (actual travel time) → s (base time)
-  const extra = clusters.reduce((sum, c) => sum + c.hold + 2*c.r, 0);
-  const sAt = t => {
-    let off = 0;
-    for (const c of clusters){
-      const a = c.s - c.r + off;                     // start of braking
-      if (t < a) break;
-      const u1 = c.r ? (t - a)/(2*c.r) : 1;
-      if (u1 < 1) return c.s - c.r + c.r*(u1 + Math.sin(Math.PI*u1)/Math.PI);
-      const h = t - a - 2*c.r;
-      if (h < c.hold) return c.s;
-      const u2 = c.r ? (h - c.hold)/(2*c.r) : 1;
-      if (u2 < 1) return c.s + c.r*(u2 - Math.sin(Math.PI*u2)/Math.PI);
-      off += c.hold + 2*c.r;
+  photoPlan.sort((a, b) => a.t0 - b.t0);
+  planBands();
+}
+/* Caption strips: shown when the marker passes their km, moved just after
+   a photo stop or a story card if they would overlap one, and one at a time. */
+function planBands(){
+  bandPlan = [];
+  const busy = [...photoPlan.map(e => [e.t0 - 1, e.t1 + 1]), ...notePlan.map(e => [e.t0 - CARD_FADE, e.t1 + CARD_FADE])];
+  let cursor = 0;
+  for (const n of activeNotes().filter(n => n.style !== 'card')){
+    const du = noteDur(n);
+    let t = Math.max(cursor, progressForDistance(n.d) * TL.travel);
+    for (let moved = true, k = 0; moved && k < 50; k++){
+      moved = false;
+      for (const [a, b] of busy) if (t < b && t + du > a){ t = b; moved = true; }
     }
-    return t - off;
-  };
-  const total = tB + extra, N = Math.max(M, Math.ceil(total*40));
-  const T = new Float64Array(N+1), D = new Float64Array(N+1);
-  for (let j=0; j<=N; j++){ T[j] = j/N*total; D[j] = baseDistAtT(sAt(T[j])); }
-  warp = { t:T, d:D, extra, clusters };
-
-  // media chained during the stop, fly-in included
-  let off = 0;
-  for (const c of clusters){
-    let t = c.s - c.r + off + 2*c.r + fade;
-    c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:c.items.length }); t += du; });
-    off += c.hold + 2*c.r;
+    bandPlan.push({ note:n, d:n.d, t0:t, t1:t + du });
+    cursor = t + du + 0.5;
   }
 }
 function progressForDistance(dd){
@@ -1567,10 +1620,12 @@ function drawHUD(f){
   if (f.hud > 0.01 && f.endA < 0.9) drawStats(f, st, cur);
   drawPhotoSpheres(f);
   drawBanner(f, acc);
+  drawCaptionStrips(f);
   if (f.photoF > 0.01){                  // veil: everything fades behind the photo
     ctx.fillStyle = `rgba(4,6,10,${(0.55*f.photoF).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
   }
   drawPhotoCards(f);
+  drawStoryCards(f);
   if (f.endA > 0.01) drawEndCard(f, acc);
 
   /* --- progress bar + credits --- */
@@ -2136,11 +2191,17 @@ function drawPhotoSphere(x, y, r, hot){
 const photosActive = f => photoPlan.length && f.phase !== 'intro' && $('#showPhotos').checked;
 const featureStyle = () => $('#photoStyle').value !== 'frame';
 const FEATURE_FADE = 0.55;
+const CARD_FADE = 0.6;          // story card: fade in / out around its reading time
 /* Spotlight amount (0 to 1): drives the map blur and veil. */
 function photoFocus(f){
-  if (!photosActive(f) || !featureStyle()) return 0;
-  const tt = f.t - TL.intro, F = FEATURE_FADE;
+  const tt = f.t - TL.intro;
   let m = 0;
+  if (f.phase !== 'intro') for (const e of notePlan){          // story cards
+    if (tt < e.t0 - CARD_FADE || tt > e.t1 + CARD_FADE) continue;
+    m = Math.max(m, easeInOut(clamp((tt - (e.t0 - CARD_FADE))/(2*CARD_FADE), 0, 1)) * easeInOut(clamp(((e.t1 + CARD_FADE) - tt)/(2*CARD_FADE), 0, 1)));
+  }
+  if (!photosActive(f) || !featureStyle()) return m * (1 - f.endA);
+  const F = FEATURE_FADE;
   for (const e of photoPlan){
     if (tt < e.t0 - F || tt > e.t1 + F) continue;
     m = Math.max(m, easeInOut(clamp((tt - (e.t0 - F))/(2*F), 0, 1)) * easeInOut(clamp(((e.t1 + F) - tt)/(2*F), 0, 1)));
@@ -2456,6 +2517,109 @@ function drawPhotoFeature(f){
   ctx.textAlign = 'left'; ctx.globalAlpha = 1;
 }
 
+/* ------------------------------------------------- notes: travel journal */
+/* Text the user writes, drawn like a travel journal: handwritten ink on
+   cream paper with torn edges and bits of tape. A caption strip sits above
+   the figures while the marker keeps moving; a story card takes the center
+   of the screen, on ruled notebook paper, while the marker is stopped. */
+const HAND = (w, s) => `${w} ${s}px Caveat, "Bradley Hand", "Segoe Print", cursive`;
+const PAPER = '#f5eddb', INK = '#2c2823';
+function wrapLines(text, maxW){
+  const out = [];
+  for (const para of String(text).split('\n')){
+    const words = para.split(/\s+/).filter(Boolean); let line = '';
+    if (!words.length){ out.push(''); continue; }
+    for (const w of words){
+      const t = line ? line + ' ' + w : w;
+      if (line && ctx.measureText(t).width > maxW){ out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  while (out.length && !out[out.length-1]) out.pop();
+  return out;
+}
+const seeded = seed => { let x = (seed >>> 0) || 1; return () => (x = (Math.imul(x, 1664525) + 1013904223) >>> 0) / 4294967296; };
+function paperPath(x, y, w, h, seed, jag){                    // torn top and bottom edges
+  const r = seeded(seed);
+  ctx.beginPath(); ctx.moveTo(x, y);
+  for (let px = x + 12; px < x + w; px += 12) ctx.lineTo(px, y + (r() - 0.5)*jag);
+  ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + h);
+  for (let px = x + w - 12; px > x; px -= 12) ctx.lineTo(px, y + h + (r() - 0.5)*jag);
+  ctx.lineTo(x, y + h); ctx.closePath();
+}
+function paper(x, y, w, h, seed, jag){
+  shadow(26, 0.5, 8); ctx.fillStyle = PAPER; paperPath(x, y, w, h, seed, jag); ctx.fill(); noShadow();
+  const g = ctx.createLinearGradient(x, y, x + w*0.3, y + h);                 // a little age on the paper
+  g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(160,125,70,0.14)');
+  ctx.fillStyle = g; paperPath(x, y, w, h, seed, jag); ctx.fill();
+}
+function drawTape(cx, cy, w, h, rot){
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
+  ctx.fillStyle = 'rgba(232,219,181,0.82)'; ctx.fillRect(-w/2, -h/2, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(-w/2, -h/2, w, h*0.35);
+  ctx.restore();
+}
+function drawCaptionStrips(f){
+  if (!bandPlan.length || f.phase === 'intro') return;
+  const tt = f.t - TL.intro, fo = 1 - f.endA;
+  bandPlan.forEach((e, i) => {
+    if (tt < e.t0 || tt > e.t1) return;
+    const k = easeInOut(clamp((tt - e.t0)/0.5, 0, 1) * clamp((e.t1 - tt)/0.5, 0, 1));
+    const a = k * fo * (1 - f.photoF);
+    if (a < 0.01) return;
+    const title = (e.note.title || '').trim(), text = (e.note.text || '').trim();
+    ctx.font = HAND(500, 44); const lines = text ? wrapLines(text, 1100).slice(0, 3) : [];
+    const lw = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
+    ctx.font = HAND(700, 54); const tw = title ? ctx.measureText(title).width : 0;
+    const w = Math.max(tw, lw) + 96, h = (title ? 60 : 0) + lines.length*48 + 36;
+    const cx = W/2, by = H - 235, x = cx - w/2, y = by - h;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.translate(cx - (1 - k)*50, by - h/2); ctx.rotate(i % 2 ? 0.01 : -0.014); ctx.translate(-cx, -(by - h/2));
+    paper(x, y, w, h, 101 + i*17, 7);
+    drawTape(x + 22, y + 8, 96, 30, -0.55); drawTape(x + w - 22, y + h - 8, 96, 30, -0.55);
+    ctx.fillStyle = INK; ctx.textAlign = 'left';
+    let ty = y + 18;
+    if (title){ ctx.font = HAND(700, 54); ctx.fillText(title, x + 48, ty + 46); ty += 60; }
+    ctx.font = HAND(500, 44);
+    for (const l of lines){ ctx.fillText(l, x + 48, ty + 40); ty += 48; }
+    ctx.restore();
+  });
+}
+function drawStoryCards(f){
+  if (!notePlan.length || f.phase === 'intro') return;
+  const tt = f.t - TL.intro, F = CARD_FADE, fo = 1 - f.endA;
+  notePlan.forEach((e, i) => {
+    if (tt < e.t0 - F || tt > e.t1 + F) return;
+    const k = Math.min(easeInOut(clamp((tt - (e.t0 - F))/(2*F), 0, 1)), easeInOut(clamp(((e.t1 + F) - tt)/(2*F), 0, 1)));
+    const a = k * fo;
+    if (a < 0.01) return;
+    const title = (e.note.title || '').trim(), text = (e.note.text || '').trim();
+    const w = 1200, pad = 100, LH = 60;
+    ctx.font = HAND(500, 50); const lines = wrapLines(text, w - pad - 80).slice(0, 10);
+    const head = title ? 100 : 30, h = 50 + head + Math.max(2, lines.length)*LH + 80;
+    const x = -w/2, y = -h/2, top = y + 50 + head;
+    ctx.save(); ctx.globalAlpha = a;
+    const s = 0.94 + 0.06*k;
+    ctx.translate(W/2, H/2 - 20 + (1 - k)*36); ctx.rotate(-0.012 + (1 - k)*0.03); ctx.scale(s, s);
+    paper(x, y, w, h, 7 + i*13, 6);
+    ctx.save(); paperPath(x, y, w, h, 7 + i*13, 6); ctx.clip();       // ruled notebook paper
+    ctx.strokeStyle = 'rgba(110,145,200,0.32)'; ctx.lineWidth = 2;
+    for (let ly = top + LH - 8; ly < y + h - 40; ly += LH){ ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + w, ly); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(214,105,95,0.5)'; ctx.beginPath(); ctx.moveTo(x + pad - 28, y); ctx.lineTo(x + pad - 28, y + h); ctx.stroke();
+    ctx.restore();
+    drawTape(x + 80, y + 6, 140, 40, -0.32); drawTape(x + w - 80, y + 6, 140, 40, 0.32);
+    ctx.fillStyle = INK; ctx.textAlign = 'left';
+    if (title){ ctx.font = HAND(700, 80); ctx.fillText(title, x + pad, y + 50 + 70); }
+    ctx.font = HAND(500, 50);
+    lines.forEach((l, j) => ctx.fillText(l, x + pad, top + LH*(j + 1) - 16));
+    const dd = U.dist(e.d);
+    ctx.font = HAND(500, 36); ctx.fillStyle = 'rgba(44,40,35,0.55)'; ctx.textAlign = 'right';
+    ctx.fillText(`km ${fmt(dd.v, 1)}`, x + w - 56, y + h - 30);
+    ctx.restore();
+  });
+  ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+
 /* ------------------------------------------ waypoint arrival banner */
 function drawBanner(f, acc){
   if (f.phase==='intro' || f.endA > 0.6) return;
@@ -2682,6 +2846,17 @@ function snapToTrack(lon, lat, tk=track){
 let tracks = [], activeId = null, nextTrackId = 1, projectBase = null;
 const activeEntry = () => tracks.find(t => t.id === activeId) || null;
 const curRoads = () => { const e = activeEntry(); return e ? (e.roads || (e.roads = [])) : []; };
+/* Notes: text written by the user, tied to a km of the track.
+   style 'band' = caption strip (the marker keeps moving), 'card' = story card (the marker stops). */
+const curNotes = () => { const e = activeEntry(); return e ? (e.notes || (e.notes = [])) : []; };
+const noteHasText = n => !!((n.title || '').trim() || (n.text || '').trim());
+const activeNotes = () => curNotes().filter(noteHasText).slice().sort((a, b) => a.d - b.d);
+/* Reading time: about 3 words per second for a strip, a bit slower for a card. */
+function noteAutoDur(n){
+  const words = `${n.title || ''} ${n.text || ''}`.split(/\s+/).filter(Boolean).length;
+  return n.style === 'card' ? clamp(2 + words/2.5, 4, 25) : clamp(1.5 + words/3, 3, 15);
+}
+const noteDur = n => Number.isFinite(n.dur) && n.dur > 0 ? n.dur : noteAutoDur(n);
 
 function defaultSubtitle(tk, withGain){
   const d0 = tk.timed ? new Date(tk.t0) : null, dd = U.dist(tk.total);
@@ -2723,6 +2898,12 @@ function buildEntry(text, filename, saved){
       const d = clamp(+r.d || 0, 0, tk.total), s = stateAt(tk, d);
       return { d, name:String(r.name ?? ''), lat:Number.isFinite(r.lat) ? r.lat : s.lat, lon:Number.isFinite(r.lon) ? r.lon : s.lon };
     }).sort((a,b)=>a.d-b.d);
+    e.notes = (Array.isArray(saved.notes) ? saved.notes : []).map(n => {
+      const d = clamp(+n.d || 0, 0, tk.total), s = stateAt(tk, d);
+      return { d, lat:Number.isFinite(n.lat) ? n.lat : s.lat, lon:Number.isFinite(n.lon) ? n.lon : s.lon,
+               style:n.style === 'card' ? 'card' : 'band', title:String(n.title ?? ''), text:String(n.text ?? ''),
+               dur:Number.isFinite(n.dur) && n.dur > 0 ? n.dur : null };
+    }).sort((a,b)=>a.d-b.d);
     e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
     e.music       = musicFromSaved(saved.music);
     e.mediaFolder = saved.mediaFolder || '';
@@ -2738,6 +2919,7 @@ function buildEntry(text, filename, saved){
       return { name:w.name || 'Point', d:s.d, lon: s.far?w.lon:s.lon, lat: s.far?w.lat:s.lat, kind:null, color:null };
     }).sort((a,b)=>a.d-b.d);
     e.roads     = [];
+    e.notes     = [];
     e.music     = musicFromSaved();
     e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
     e.subtitle  = defaultSubtitle(tk);
@@ -2782,7 +2964,7 @@ function activate(id){
   syncLabels(); rebuildMotion();
   lastDoneIdx=-1; invalidateOverview(); curT=0;
   mini = null; scheduleMinimap();
-  pushRoute(); renderWpList(); renderRoadList(); showTrackInfo(); renderTrackList();
+  pushRoute(); renderWpList(); renderRoadList(); renderNoteList(); showTrackInfo(); renderTrackList();
   updatePhotoInfo(); renderPhotoStrip(); makeThumbs();
   if (inMap) setEditing(true);
   if (tab === 'clips') renderClipEditor();
@@ -2798,7 +2980,7 @@ function clearActive(){
   $('#title').value = ''; $('#subtitle').value = ''; $('#endSubtitle').value = '';
   pushRoute();
   if (map.getSource('done')) map.getSource('done').setData(EMPTY);
-  renderWpList(); renderRoadList(); renderTrackList(); updateClock();
+  renderWpList(); renderRoadList(); renderNoteList(); renderTrackList(); updateClock();
   $('#trackInfo').textContent = 'No track loaded.';
   renderPreview();
 }
@@ -2979,6 +3161,8 @@ function buildProjectData(){
                                        lat:Math.round(w.lat*1e7)/1e7, lon:Math.round(w.lon*1e7)/1e7 })),
       roads: (t.roads || []).map(r=>({ name:r.name, d:Math.round(r.d*100)/100, lat:Math.round(r.lat*1e7)/1e7, lon:Math.round(r.lon*1e7)/1e7 })),
       mediaFolder: t.mediaFolder || '',
+      notes: (t.notes || []).filter(noteHasText).map(n=>({ d:Math.round(n.d*100)/100, lat:Math.round(n.lat*1e7)/1e7, lon:Math.round(n.lon*1e7)/1e7,
+                                                         style:n.style, title:n.title, text:n.text, dur:n.dur ?? null })),
       music: musicForSave(t),
       // media are not embedded: only what can't be recovered from their files
       media: mediaMetaForSave(t)
@@ -3085,6 +3269,85 @@ function addRoadHere(){
   renderRoadList();
   const li = $('#roadList').children[rs.indexOf(r)];
   if (li){ const inp = li.querySelector('input[type=text]'); inp.focus(); inp.select(); }
+}
+
+/* ---- notes ---- */
+let noteTimer = 0;
+function notesChanged(now){
+  clearTimeout(noteTimer);
+  const go = () => { rebuildMotion(); curT = Math.min(curT, TL.total); if (!exporting) renderPreview(); if (tab === 'music') drawMusicTimeline(true); };
+  if (now) go(); else noteTimer = setTimeout(go, 350);
+}
+function renderNoteList(){
+  const ul = $('#noteList'); if (!ul) return;
+  ul.innerHTML = '';
+  const ns = curNotes();
+  ns.forEach((n, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<div class="nr">
+        <button class="go" title="Go to this note">▸</button>
+        <select class="st"><option value="band">Caption</option><option value="card">Story card</option></select>
+        km <input class="km" type="text">
+        <span class="sp"></span>
+        <input class="du" type="text" placeholder="auto" title="Reading time (s) — empty: from the length of the text"> s
+        <button class="del" title="Delete">×</button></div>
+      <input class="ti" type="text" placeholder="Title (optional)">
+      <textarea class="tx" placeholder="Your text…"></textarea>`;
+    const st = li.querySelector('.st'), km = li.querySelector('.km'), du = li.querySelector('.du');
+    const ti = li.querySelector('.ti'), tx = li.querySelector('.tx');
+    st.value = n.style; km.value = fmt(U.dist(n.d).v, 2); ti.value = n.title; tx.value = n.text;
+    const showDur = () => { du.value = n.dur ? fmt(n.dur, 1) : ''; du.placeholder = 'auto ' + fmt(noteAutoDur(n), 1); };
+    showDur();
+    st.onchange = () => { n.style = st.value; showDur(); notesChanged(true); };
+    ti.oninput = () => { n.title = ti.value; showDur(); notesChanged(); };
+    tx.oninput = () => { n.text = tx.value; showDur(); notesChanged(); };
+    du.onchange = () => { const x = parseFloat(du.value.replace(',', '.')); n.dur = Number.isFinite(x) && x > 0 ? clamp(x, 1, 60) : null; showDur(); notesChanged(true); };
+    km.onchange = () => {
+      const v = parseFloat(km.value.replace(',', '.'));
+      if (Number.isFinite(v)){
+        n.d = clamp(U.imperial ? v*1609.344 : v*1000, 0, track.total);
+        const s = stateAt(track, n.d); n.lat = s.lat; n.lon = s.lon;
+        ns.sort((a, b) => a.d - b.d); renderNoteList(); notesChanged(true);
+      } else km.value = fmt(U.dist(n.d).v, 2);
+    };
+    li.querySelector('.go').onclick = () => {
+      setPlaying(false);
+      const e = [...notePlan, ...bandPlan].find(x => x.note === n);
+      curT = e ? Math.min(TL.total, TL.intro + e.t0 + 0.6) : TL.intro + progressForDistance(n.d)*TL.travel;
+      renderPreview();
+    };
+    li.querySelector('.del').onclick = () => { ns.splice(i, 1); renderNoteList(); notesChanged(true); };
+    ul.appendChild(li);
+  });
+  if (!ns.length) ul.innerHTML = '<li style="border:none;background:none;color:#8b97ad;font-size:11.5px;padding:2px 0">No notes yet.</li>';
+}
+function addNoteHere(){
+  if (!track){ toast('Load a GPX track first.', true); return; }
+  const f = frameAt(curT), d = f.phase === 'intro' ? 0 : f.phase === 'outro' ? track.total : f.d, s = stateAt(track, d);
+  const n = { d, lat:s.lat, lon:s.lon, style:'band', title:'', text:'', dur:null };
+  const ns = curNotes(); ns.push(n); ns.sort((a, b) => a.d - b.d);
+  renderNoteList();
+  const li = $('#noteList').children[ns.indexOf(n)];
+  if (li){ li.scrollIntoView({ block:'nearest' }); li.querySelector('.tx').focus(); }
+}
+/* Stretches of the route (in travel seconds) with no photo, clip or note on screen. */
+function contentGaps(minLen = 12){
+  const busy = [...photoPlan.map(e => [e.t0 - 1, e.t1 + 1]), ...notePlan.map(e => [e.t0 - CARD_FADE, e.t1 + CARD_FADE]), ...bandPlan.map(e => [e.t0, e.t1])]
+    .sort((a, b) => a[0] - b[0]);
+  const gaps = []; let t = 0;
+  for (const [a, b] of busy){ if (a - t >= minLen) gaps.push([t, a]); t = Math.max(t, b); }
+  if (TL.travel - t >= minLen) gaps.push([t, TL.travel]);
+  return gaps;
+}
+function nextGap(){
+  if (!track){ toast('Load a GPX track first.', true); return; }
+  const gaps = contentGaps(), now = curT - TL.intro;
+  if (!gaps.length){ toast('No long stretch without photos or notes.'); return; }
+  const g = gaps.find(([a, b]) => (a + b)/2 > now + 0.5) || gaps[0];
+  setPlaying(false);
+  curT = TL.intro + (g[0] + g[1])/2; renderPreview();
+  const d0 = U.dist(distAtProgress(g[0]/TL.travel)), d1 = U.dist(distAtProgress(g[1]/TL.travel));
+  toast(`Gap of ${Math.round(g[1] - g[0])} s: km ${fmt(d0.v, 1)} → ${fmt(d1.v, 1)} (${gaps.length} in all). “+ At playhead” adds a note here.`);
 }
 
 /* Detection from OpenStreetMap (Overpass): the ways near the track are
@@ -3743,6 +4006,8 @@ function refreshTrackFromGpx(e, text){
     const s = snapToTrack(r.lon, r.lat, tk); r.d = s.d;
   }
   if (e.roads) e.roads.sort((a, b) => a.d - b.d);
+  for (const n of e.notes || []){ const s = snapToTrack(n.lon, n.lat, tk); n.d = s.d; }
+  if (e.notes) e.notes.sort((a, b) => a.d - b.d);
   if (wasDefaultSub) e.subtitle = defaultSubtitle(tk);
   if (+e.dur === defDur) e.dur = defaultDur(tk);
 }
@@ -4761,6 +5026,7 @@ async function exportVideo(){
       if (cancelFlag){ toast('Export canceled.'); return; }
     }
     setExportUI(true, 0, 'Preparing the render…');
+    if (document.fonts) await Promise.all(['500 40px Caveat', '700 40px Caveat'].map(ff => document.fonts.load(ff))).catch(() => {});
     const muxer = new Mp4Muxer.Muxer({
       target: new Mp4Muxer.ArrayBufferTarget(),
       video: {codec:'avc', width:W, height:H, frameRate:fps},
@@ -5262,7 +5528,7 @@ function drawMusicTimeline(rebuild){
     cv.width = Math.round(Wc*dpr); cv.height = Math.round(Hc*dpr); rebuild = true;
   }
   const T = TL.total, m = curMusic();
-  const sig = [T, TL.intro, TL.outro, photoPlan.length, Wc, m && m.vol, m && m.xfade, m && m.endFade, m && m.loop,
+  const sig = [T, TL.intro, TL.outro, photoPlan.length, notePlan.map(e => e.t0).join(), bandPlan.map(e => e.t0 + ':' + e.t1).join(), Wc, m && m.vol, m && m.xfade, m && m.endFade, m && m.loop,
                m && m.items.map(i => [i.name, i.on, i.vol, i.fin, i.fout, !!i.peaks, i.dur]).join(), musicSel,
                document.documentElement.dataset.theme].join('|');
   if (rebuild || !mtl || mtl.sig !== sig){
@@ -5297,6 +5563,22 @@ function drawMusicTimeline(rebuild){
           g.drawImage(im, a + 1, vy + 17, w, h);
         }
       }
+    }
+    for (const [a0, b0] of contentGaps()){          // stretches with nothing on screen: hatched
+      const a = X(TL.intro + a0), b = X(TL.intro + b0);
+      g.save(); g.beginPath(); g.rect(a, vy + 16, b - a, vh - 30); g.clip();
+      g.strokeStyle = muted + '66'; g.lineWidth = 1;
+      for (let xx = a - 20; xx < b; xx += 7){ g.beginPath(); g.moveTo(xx, vy + vh - 14); g.lineTo(xx + 14, vy + 16); g.stroke(); }
+      g.restore();
+    }
+    for (const e of notePlan){                      // story cards
+      const a = X(TL.intro + e.t0 - CARD_FADE), b = X(TL.intro + e.t1 + CARD_FADE);
+      g.fillStyle = '#e9dcb4'; g.fillRect(a, vy + 16, Math.max(3, b - a), vh - 30);
+      g.fillStyle = '#2c2823'; g.font = '600 11px system-ui'; if (b - a > 14) g.fillText('✎', a + 3, vy + 30);
+    }
+    for (const e of bandPlan){                      // caption strips
+      const a = X(TL.intro + e.t0), b = X(TL.intro + e.t1);
+      g.fillStyle = '#f5eddb'; g.fillRect(a, vy + vh - 12, Math.max(3, b - a), 7);
     }
     // song lanes
     const plan = musicPlan(m), ly = [vy + vh + 8, vy + vh + 8 + 50], lh = 44;
@@ -5514,6 +5796,8 @@ $('#clearPhotos').onclick = () => {
   toast('Track media removed (hand-placed positions remain remembered).');
 };
 $('#roadHere').onclick = addRoadHere;
+$('#noteHere').onclick = addNoteHere;
+$('#noteGap').onclick = nextGap;
 $('#roadDetect').onclick = detectRoads;
 $('#addHere').onclick = ()=>{
   if (!track) { toast('Load a GPX track first.', true); return; }
@@ -5547,6 +5831,7 @@ $('#themeBtn').onclick = () => {
 };
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (theme === 'auto') applyTheme('auto'); });
 initMusicTab();
+if (document.fonts) document.fonts.load('700 40px Caveat').then(() => { if (!exporting) renderPreview(); }).catch(() => {});
 $('#openProject').onclick = openProjectFlow;
 $('#reopenProject').onclick = reopenLastProject;
 updateReopen();

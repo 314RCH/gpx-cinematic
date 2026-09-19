@@ -213,6 +213,35 @@ turns on the same file: while one plays a segment, the other is already
 waiting, cued to the next one, which gives clean cuts and makes crossfades
 possible.
 
+## Notes (travel journal)
+
+Your own words for the stretches without photos, drawn like a travel
+journal: handwritten ink (Caveat) on cream paper with torn edges and bits of
+tape. Two styles, chosen per note:
+
+- **Caption**: a paper strip above the figures, while the marker keeps
+  moving. For short remarks (“Cool morning, the road climbs through the
+  larches”).
+- **Story card**: the map blurs and dims, and a page of ruled notebook paper
+  (red margin, title, text, km) fills the screen; **the marker stops** while
+  it is read, then sets off again — like a photo stop.
+
+Section **Notes** of the panel: put the playhead where the note belongs, then
+**+ At playhead**; type an optional title and the text (line breaks are
+kept), and pick the style. The reading time comes from the length of the
+text (about 3 words per second for a caption, a little slower for a card);
+type a duration to override it. ▸ jumps to the note.
+
+Notes are tied to a km of the track, so they stay in place when the route
+duration or the photos change. A caption that would fall on a photo stop or
+a story card is moved just after it, and captions never overlap each other.
+**⇥ Next gap** moves the playhead to the next stretch of at least 12 s with
+no photo, clip or note on screen — the stretches worth filling. In the
+🎵 Soundtrack tab, the video lane shows story cards (✎), captions (cream
+strips) and those gaps (hatched).
+
+Notes are saved in the project and follow the track if its GPX is updated.
+
 ## Soundtrack (🎵 Soundtrack tab)
 
 Each track has its own music: a folder of audio files (mp3, m4a, aac, wav,
@@ -293,7 +322,7 @@ replay/
   exact location, color), start/finish, settings, active track, and for each
   media item its hand-placed location, its inclusion choice and, for a video,
   its edit (segments, transitions, transition duration), plus each track’s
-  roads and soundtrack (music folder, order, volumes, fades, crossfade, end
+  roads, notes and soundtrack (music folder, order, volumes, fades, crossfade, end
   fade-out, loop). The photo, video and audio files themselves stay in their
   folders.
 - Opening and saving to a folder require Chrome or Edge. Elsewhere: a `.json`
