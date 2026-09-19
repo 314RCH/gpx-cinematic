@@ -253,6 +253,35 @@ body.tab-clips #clipEditor{display:flex}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.err{border-color:var(--err);color:var(--errTxt)}
 .maplibregl-ctrl-attrib{display:none!important}
+#musicPanel{display:none;flex:0 0 auto;flex-direction:column;gap:8px;max-height:52%;min-height:0}
+body.tab-music #musicPanel{display:flex}
+#musicPanel .mhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+#musicPanel .mhead button{width:auto;margin:0;padding:6px 10px;font-size:12px}
+#musicPanel .mhead label{display:flex;align-items:center;gap:5px;margin:0}
+#musicPanel .mhead input[type=text]{width:48px;margin:0;padding:3px 6px}
+#musicPanel .mhead input[type=range]{width:110px;accent-color:var(--accent)}
+#musicPanel .mhead .sp{flex:1}
+#musicInfo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px}
+#mTLWrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 0}
+#mTL{display:block;width:100%;height:188px;cursor:pointer;touch-action:none}
+#mList{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:4px}
+.mrow{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:12px}
+.mrow.sel{border-color:var(--accent)}
+.mrow.off{opacity:.5}
+.mrow.over{border-color:var(--selLine);box-shadow:0 -2px 0 var(--selLine)}
+.mrow.drag{opacity:.4}
+.mrow .grip{cursor:grab;color:var(--muted);font-size:14px;padding:0 2px}
+.mrow .sw{flex:0 0 10px;height:10px;border-radius:3px}
+.mrow input[type=checkbox]{margin:0;width:auto}
+.mrow .nm{flex:1;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.mrow .du,.mrow .at{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mrow label{display:flex;align-items:center;gap:4px;margin:0;color:var(--muted);white-space:nowrap}
+.mrow input[type=range]{width:80px;margin:0;accent-color:var(--accent)}
+.mrow label b{font-weight:500;min-width:34px;font-variant-numeric:tabular-nums}
+.mrow input[type=text]{width:40px;margin:0;padding:2px 5px}
+.mrow button{width:auto;margin:0;padding:2px 6px;font-size:10px}
+.mnote{font-size:11.5px;color:var(--muted);padding:2px 4px}
+#transport #mute{font-size:14px}
 #themeBtn{position:absolute;top:12px;right:14px;width:auto;margin:0;padding:3px 9px;font-size:11.5px;color:var(--muted)}
 </style>
 </head>
@@ -431,6 +460,7 @@ body.tab-clips #clipEditor{display:flex}
     <button class="tab on" data-tab="video">🎬 Video</button>
     <button class="tab" data-tab="map">🗺 Map &amp; photos</button>
     <button class="tab" data-tab="clips">✂ Clips</button>
+    <button class="tab" data-tab="music">🎵 Soundtrack</button>
   </div>
   <div id="work">
     <div id="vpWrap">
@@ -482,6 +512,21 @@ body.tab-clips #clipEditor{display:flex}
     <input type="range" id="scrub" min="0" max="1000" value="0" step="1">
     <div id="phase">—</div>
     <div id="clock">0:00 / 0:00</div>
+    <button id="mute" title="Mute / unmute the soundtrack in the preview (the export is not affected)">🔊</button>
+  </div>
+  <div id="musicPanel">
+    <div class="mhead">
+      <button id="musicFolder" title="Choose this track’s music folder (mp3, m4a, wav, ogg…)">📁 Music folder</button>
+      <span id="musicInfo"></span>
+      <span class="sp"></span>
+      <label title="Overall music volume">Volume <input type="range" id="mVol" min="0" max="100"> <b id="mVolV"></b></label>
+      <label title="Overlap between consecutive songs, faded out / in (s)">Crossfade <input type="text" id="mXfade"> s</label>
+      <label title="Fade-out over the last seconds of the video (s)">End fade-out <input type="text" id="mEnd"> s</label>
+      <label title="Start the playlist again when it is shorter than the video"><input type="checkbox" id="mLoop"> Loop</label>
+    </div>
+    <div id="mTLWrap"><canvas id="mTL"></canvas></div>
+    <div id="mList"></div>
+    <input type="file" id="musicDirInput" webkitdirectory multiple hidden>
   </div>
 </main>
 <div id="toast"></div>
@@ -2511,6 +2556,7 @@ function renderPreview(){
 }
 function updateClock(f){
   $('#clock').textContent = `${mmss(curT)} / ${mmss(TL.total)}`;
+  if (tab === 'music') drawMusicTimeline();
   $('#phase').textContent = !track ? '—' : {intro:'Intro', travel:'Route', outro:'Outro'}[f?f.phase:'intro'];
   if (document.activeElement !== $('#scrub')) $('#scrub').value = Math.round(clamp(curT/TL.total,0,1)*1000);
 }
@@ -2522,8 +2568,10 @@ function setPlaying(v){
     laReset(curT);
     lastTs = performance.now();
     rafId = requestAnimationFrame(tick);
+    musicStart();
   } else {
     if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    musicStop();
     pauseAllVideos(); setBuffering(false);
     if (track && !exporting) renderPreview();   // the map may have been left on a lookahead view
   }
@@ -2590,9 +2638,9 @@ function lookahead(ts){
   }
   const hz = laHorizon(), end = TL.total;
   if (!LA.stalled && hz < Math.min(end, curT + 0.3)){
-    LA.stalled = true; LA.since = ts; pauseAllVideos(); setBuffering(true);
+    LA.stalled = true; LA.since = ts; pauseAllVideos(); setBuffering(true); musicHold(true);
   } else if (LA.stalled && (hz >= Math.min(end, curT + 2.5) || ts - LA.since > 10000)){
-    LA.stalled = false; setBuffering(false);
+    LA.stalled = false; setBuffering(false); musicHold(false);
     if (ts - LA.since > 10000) laReset(curT + 2.5);  // network stuck: don't wait forever
   }
   return LA.stalled;
@@ -2600,7 +2648,9 @@ function lookahead(ts){
 function tick(ts){
   if (!playing) return;
   if (!lookahead(ts)){
-    curT = Math.min(TL.total, curT + Math.min(0.1, (ts-lastTs)/1000));
+    // with a soundtrack, the audio clock leads: picture and sound stay in sync
+    const mc = musicClock();
+    curT = Math.min(TL.total, mc != null ? mc : curT + Math.min(0.1, (ts-lastTs)/1000));
     renderPreview();
     if (curT >= TL.total) { setPlaying(false); return; }
   }
@@ -2674,6 +2724,7 @@ function buildEntry(text, filename, saved){
       return { d, name:String(r.name ?? ''), lat:Number.isFinite(r.lat) ? r.lat : s.lat, lon:Number.isFinite(r.lon) ? r.lon : s.lon };
     }).sort((a,b)=>a.d-b.d);
     e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
+    e.music       = musicFromSaved(saved.music);
     e.mediaFolder = saved.mediaFolder || '';
     e.title     = saved.title ?? (g.name || '');
     e.subtitle  = saved.subtitle == null || isDefaultSubtitle(saved.subtitle, tk) ? defaultSubtitle(tk) : saved.subtitle;
@@ -2687,6 +2738,7 @@ function buildEntry(text, filename, saved){
       return { name:w.name || 'Point', d:s.d, lon: s.far?w.lon:s.lon, lat: s.far?w.lat:s.lat, kind:null, color:null };
     }).sort((a,b)=>a.d-b.d);
     e.roads     = [];
+    e.music     = musicFromSaved();
     e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
     e.subtitle  = defaultSubtitle(tk);
     e.endSubtitle = '';
@@ -2734,6 +2786,7 @@ function activate(id){
   updatePhotoInfo(); renderPhotoStrip(); makeThumbs();
   if (inMap) setEditing(true);
   if (tab === 'clips') renderClipEditor();
+  if (tab === 'music') renderMusicPanel();
   renderPreview(); refreshPreviewSoon();
 }
 function clearActive(){
@@ -2753,7 +2806,7 @@ function removeTrack(id){
   if (exporting) return;
   const i = tracks.findIndex(t => t.id === id);
   if (i < 0) return;
-  releaseMedia(tracks[i].media);
+  releaseMedia(tracks[i].media); releaseMusic(tracks[i].music);
   tracks.splice(i, 1);
   if (id !== activeId){ pushRoute(); renderTrackList(); renderPreview(); return; }
   if (tracks.length) activate(tracks[Math.min(i, tracks.length-1)].id);
@@ -2778,7 +2831,8 @@ function renderTrackList(){
     nm.textContent = t.title || t.gpxName; nm.title = t.gpxName;
     const mc  = document.createElement('span'); mc.className = 'mc';
     const nv = t.media.filter(m => m.kind === 'video').length, np = t.media.length - nv;
-    mc.textContent = [np ? `📷 ${np}` : '', nv ? `🎬 ${nv}` : ''].filter(Boolean).join(' ');
+    const na = t.music ? t.music.items.length : 0;
+    mc.textContent = [np ? `📷 ${np}` : '', nv ? `🎬 ${nv}` : '', na ? `🎵 ${na}` : ''].filter(Boolean).join(' ');
     mc.title = t.expectedMedia && !t.media.length ? `${t.expectedMedia} media file(s) referenced by the project: reload the folder${t.mediaFolder ? ' “' + t.mediaFolder + '”' : ''}` : (t.mediaFolder ? 'Folder: ' + t.mediaFolder : '');
     if (t.expectedMedia && !t.media.length) mc.textContent = `⚠ ${t.expectedMedia}`;
     const ds  = document.createElement('span'); ds.className = 'ds';
@@ -2925,6 +2979,7 @@ function buildProjectData(){
                                        lat:Math.round(w.lat*1e7)/1e7, lon:Math.round(w.lon*1e7)/1e7 })),
       roads: (t.roads || []).map(r=>({ name:r.name, d:Math.round(r.d*100)/100, lat:Math.round(r.lat*1e7)/1e7, lon:Math.round(r.lon*1e7)/1e7 })),
       mediaFolder: t.mediaFolder || '',
+      music: musicForSave(t),
       // media are not embedded: only what can't be recovered from their files
       media: mediaMetaForSave(t)
     }))
@@ -3294,11 +3349,13 @@ function setTab(t){
   tab = t;
   document.body.classList.toggle('tab-map', t === 'map');
   document.body.classList.toggle('tab-clips', t === 'clips');
+  document.body.classList.toggle('tab-music', t === 'music');
   $$('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   setPlaying(false);
   setEditing(t === 'map');
   if (t === 'map') renderPhotoStrip();
   if (t === 'clips') renderClipEditor();
+  if (t === 'music') requestAnimationFrame(() => { layout(); renderMusicPanel(); renderPreview(); });
   if (t === 'video'){ layout(); renderPreview(); refreshPreviewSoon(); }
 }
 
@@ -3725,9 +3782,12 @@ async function autoLoadMedia(){
     if (t.mediaFolder && t.mediaFolder !== '.'){
       try { h = await dirAtPath(projectDir, t.mediaFolder); rel = t.mediaFolder; } catch(e){}
     }
-    if (!h){
-      const c = dirs.find(d => trackMatchesName(t, d.h.name));
-      if (c){ h = c.h; rel = c.path.join('/'); }
+    let fs = null;
+    if (!h){                               // a folder with the track's name that holds photos/videos (not its music)
+      for (const c of dirs.filter(d => trackMatchesName(t, d.h.name))){
+        const got = await filesFromHandle(c.h);
+        if (got.length){ h = c.h; rel = c.path.join('/'); fs = got; break; }
+      }
     }
     if (!h && HAS_FSA){                    // folder chosen outside the project, if access is already granted
       const rec = await idb.get(trackKey(t));
@@ -3735,7 +3795,7 @@ async function autoLoadMedia(){
     }
     if (!h) continue;
     $('#projectInfo').textContent = `Loading media for “${t.title || t.gpxName}”…`;
-    const fs = await filesFromHandle(h);
+    fs = fs || await filesFromHandle(h);
     if (!fs.length) continue;
     await loadPhotos(fs, t, true);
     t.mediaDir = h; t.mediaFolder = rel;
@@ -3768,11 +3828,13 @@ async function openProjectDir(dir){
   rememberProjectDir(dir);
   const sync = projs.length ? await syncGpxFromDir(dir) : { updated:[], added:[], failed:[] };
   const r = await autoLoadMedia();
+  const nm = await autoLoadMusic(await listDirs(dir, 3));
   const missing = tracks.filter(t => t.expectedMedia && !t.media.length).length;
   toast(`Project “${dir.name}” opened · ${tracks.length} track(s)` +
         (sync.updated.length ? ` · GPX updated: ${sync.updated.map(t => t.gpxName).join(', ')}` : '') +
         (sync.added.length ? ` · new GPX: ${sync.added.join(', ')}` : '') +
         (r.files ? ` · ${r.files} photo(s)/video(s) reloaded for ${r.tracks} track(s)` : '') +
+        (nm ? ` · music for ${nm} track(s)` : '') +
         (missing ? ` · ⚠ folder not found for ${missing} track(s)` : '') +
         (sync.failed.length ? ` · unreadable GPX: ${sync.failed[0]}` : ''), !!(missing || sync.failed.length));
   if (sync.updated.length || sync.added.length) $('#projectInfo').textContent += ' · modified, remember to save';
@@ -4689,10 +4751,20 @@ async function exportVideo(){
       }
       if (cancelFlag){ toast('Export canceled.'); return; }
     }
+    // soundtrack: mixed offline first, encoded to AAC (or Opus) once the frames are done
+    let sound = null, acodec = null;
+    if (hasMusic()){
+      setExportUI(true, 0, 'Mixing the soundtrack…');
+      acodec = await audioCodecFor(48000);
+      if (!acodec) toast('This browser cannot encode audio: the MP4 will be silent.', true);
+      else sound = await renderSoundtrack(48000);
+      if (cancelFlag){ toast('Export canceled.'); return; }
+    }
     setExportUI(true, 0, 'Preparing the render…');
     const muxer = new Mp4Muxer.Muxer({
       target: new Mp4Muxer.ArrayBufferTarget(),
       video: {codec:'avc', width:W, height:H, frameRate:fps},
+      ...(sound ? { audio: { codec:acodec.box, numberOfChannels:2, sampleRate:48000 } } : {}),
       fastStart:'in-memory'
     });
     let encError=null;
@@ -4727,7 +4799,17 @@ async function exportVideo(){
     if (cancelFlag){ encoder.close(); toast('Export canceled.'); return; }
 
     setExportUI(true, 100, 'Finalizing the MP4 file…');
-    await encoder.flush(); encoder.close(); muxer.finalize();
+    await encoder.flush(); encoder.close();
+    if (sound){
+      setExportUI(true, 100, 'Encoding the soundtrack…');
+      let aErr = null;
+      const aenc = new AudioEncoder({ output:(chunk, meta) => muxer.addAudioChunk(chunk, meta), error:e => { aErr = e; } });
+      aenc.configure(acodec.cfg);
+      await encodeSoundtrack(sound, aenc);
+      aenc.close();
+      if (aErr) throw aErr;
+    }
+    muxer.finalize();
     download(new Blob([muxer.target.buffer], {type:'video/mp4'}), `${slug()}-${W}x${H}.mp4`);
     toast('MP4 exported ✔');
   } catch(err){
@@ -4810,11 +4892,20 @@ async function exportRealtime(fps, bitrate, frames){
   if (!mime){ toast('No video encoder available in this browser.', true); return; }
   setExportUI(true, 0, 'Real-time capture (don’t switch tabs)…');
   const stream = view.captureStream(fps);
+  // soundtrack: played live into the recording
+  let actx = null, adest = null;
+  if (hasMusic()){
+    await ensureMusicDecoded();
+    actx = musicCtx(); await actx.resume().catch(() => {});
+    adest = actx.createMediaStreamDestination();
+    stream.addTrack(adest.stream.getAudioTracks()[0]);
+  }
   const chunks=[];
   const rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:bitrate});
   rec.ondataavailable = e => e.data.size && chunks.push(e.data);
   const done = new Promise(r => rec.onstop = r);
   rec.start(500);
+  const anodes = actx ? scheduleMusic(actx, adest, curMusic(), 0, actx.currentTime) : [];
   const t0=performance.now();
   await new Promise(res=>{
     const loop=()=>{
@@ -4827,11 +4918,471 @@ async function exportRealtime(fps, bitrate, frames){
     };
     loop();
   });
+  for (const nd of anodes) try { nd.stop(); } catch(e){}
   rec.stop(); await done;
   if (cancelFlag){ toast('Export canceled.'); return; }
   const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
   download(new Blob(chunks,{type:mime}), `${slug()}-${W}x${H}.${ext}`);
   toast(ext==='mp4' ? 'MP4 exported ✔' : 'WebM exported (MP4 unavailable in this browser).');
+}
+</script>
+
+<script>
+/* ======================================================================== */
+/*  SOUNDTRACK                                                              */
+/* ======================================================================== */
+/* Each track has its own music folder (mp3, m4a, wav…). The songs play one
+   after the other from the very start of the video, in the order chosen in
+   the 🎵 Soundtrack tab, each with its own volume and fade in / fade out;
+   consecutive songs overlap by the crossfade time, and everything fades out
+   over the last seconds of the video. The same plan drives the preview
+   (Web Audio, clocked on the audio so picture and sound stay in sync) and
+   the export (rendered offline, then encoded to AAC into the MP4). */
+const AUDIO_RE = /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i;
+const MUSIC_DEFAULTS = { vol:0.8, xfade:3, endFade:3, loop:false };
+function musicFromSaved(m){
+  m = m || {};
+  return { folder:m.folder || '', dir:null, vol:Number.isFinite(m.vol) ? m.vol : MUSIC_DEFAULTS.vol,
+           xfade:Number.isFinite(m.xfade) ? m.xfade : MUSIC_DEFAULTS.xfade,
+           endFade:Number.isFinite(m.endFade) ? m.endFade : MUSIC_DEFAULTS.endFade,
+           loop:!!m.loop, items:[], saved:Array.isArray(m.items) ? m.items : [] };
+}
+function musicForSave(t){
+  const m = t.music; if (!m) return null;
+  const items = m.items.length ? m.items.map(i => ({ name:i.name, on:i.on, vol:i.vol, fin:i.fin, fout:i.fout })) : m.saved;
+  return { folder:m.folder, vol:m.vol, xfade:m.xfade, endFade:m.endFade, loop:m.loop, items };
+}
+const curMusic = () => { const e = activeEntry(); return e ? (e.music || (e.music = musicFromSaved())) : null; };
+const hasMusic = (m = curMusic()) => !!(m && m.items.some(i => i.on && i.dur > 0.5));
+
+/* ---- plan: when each song plays, with its fades ---- */
+function musicPlan(m = curMusic()){
+  if (!m) return [];
+  const list = m.items.filter(i => i.on && i.dur > 0.5), T = TL.total, out = [];
+  if (!list.length) return out;
+  let t = 0;
+  for (let k = 0; t < T && k < 400; k++){
+    if (k >= list.length && !m.loop) break;
+    const it = list[k % list.length], next = list[(k + 1) % list.length];
+    const chained = k + 1 < list.length || m.loop;
+    out.push({ it, start:t, end:t + it.dur, k });
+    t += it.dur - (chained ? Math.min(m.xfade, it.dur/2, next.dur/2) : 0);
+  }
+  out.forEach((s, i) => {
+    const prev = out[i-1], next = out[i+1];
+    s.fin  = Math.max(s.it.fin || 0, prev ? prev.end - s.start : 0);     // a crossfade is a fade too
+    s.fout = Math.max(s.it.fout || 0, next ? s.end - next.start : 0);
+  });
+  return out;
+}
+/* Gain of a planned song at video time t: volumes × equal-power fades. */
+function segGain(m, s, t){
+  if (t < s.start || t > s.end) return 0;
+  let g = m.vol * (s.it.vol ?? 1);
+  const a = t - s.start, b = s.end - t, T = TL.total;
+  if (s.fin > 0 && a < s.fin) g *= Math.sin(Math.PI/2 * a/s.fin);
+  if (s.fout > 0 && b < s.fout) g *= Math.sin(Math.PI/2 * b/s.fout);
+  if (m.endFade > 0 && T - t < m.endFade) g *= Math.sin(Math.PI/2 * clamp((T - t)/m.endFade, 0, 1));
+  return Math.max(0, g);
+}
+/* Schedules the soundtrack from video time fromT at audio time when0. */
+function scheduleMusic(ctx, dest, m, fromT, when0){
+  const nodes = [], T = TL.total;
+  for (const s of musicPlan(m)){
+    const endT = Math.min(s.end, T);
+    if (endT <= fromT + 0.01 || !s.it.buf) continue;
+    const t0 = Math.max(fromT, s.start), dur = endT - t0;
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = s.it.buf;
+    const N = Math.max(2, Math.ceil(dur*40)), curve = new Float32Array(N);
+    for (let i = 0; i < N; i++) curve[i] = segGain(m, s, t0 + dur*i/(N-1));
+    g.gain.value = curve[0];
+    g.gain.setValueCurveAtTime(curve, when0 + (t0 - fromT), dur);
+    src.connect(g).connect(dest);
+    src.start(when0 + (t0 - fromT), t0 - s.start, dur);
+    nodes.push(src);
+  }
+  return nodes;
+}
+
+/* ---- decoding (only the songs the video actually reaches) ---- */
+const Music = { ctx:null, master:null, nodes:[], on:false, t0:0, c0:0, muted:false };
+function musicCtx(){
+  if (!Music.ctx){
+    Music.ctx = new AudioContext({ sampleRate:48000 });
+    Music.master = Music.ctx.createGain();
+    Music.master.gain.value = Music.muted ? 0 : 1;
+    Music.master.connect(Music.ctx.destination);
+  }
+  return Music.ctx;
+}
+async function decodeItem(it){
+  if (it.buf || it.bad) return;
+  if (!it.decoding) it.decoding = (async () => {
+    try {
+      const buf = await musicCtx().decodeAudioData(await it.file.arrayBuffer());
+      it.buf = buf; it.dur = buf.duration;
+      // peaks for the waveform: one value per 25 ms
+      const n = Math.max(1, Math.ceil(buf.duration*40)), step = Math.floor(buf.length/n) || 1, pk = new Float32Array(n);
+      const chans = Array.from({ length:buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
+      for (let i = 0; i < n; i++){
+        let mx = 0; const a = i*step, b = Math.min(buf.length, a + step);
+        for (const ch of chans) for (let j = a; j < b; j += 8){ const v = Math.abs(ch[j]); if (v > mx) mx = v; }
+        pk[i] = mx;
+      }
+      it.peaks = pk;
+    } catch(e){ it.bad = true; console.warn('audio', it.name, e); }
+  })();
+  await it.decoding;
+}
+/* Decodes what the plan needs; durations can shift slightly once decoded,
+   so we go round until the set of needed songs is stable. */
+async function ensureMusicDecoded(m = curMusic()){
+  for (let pass = 0; pass < 4; pass++){
+    const need = [...new Set(musicPlan(m).filter(s => s.start < TL.total).map(s => s.it))].filter(i => !i.buf && !i.bad);
+    if (!need.length) return;
+    await Promise.all(need.map(decodeItem));
+  }
+}
+function releaseMusic(m){
+  if (!m) return;
+  for (const it of m.items){ it.buf = null; it.peaks = null; it.decoding = null; }
+}
+
+/* ---- preview playback, clocked on the audio ---- */
+async function musicStart(){
+  musicStop();
+  const m = curMusic();
+  if (!hasMusic(m) || !playing) return;
+  const ctx = musicCtx();
+  await ctx.resume().catch(() => {});
+  await ensureMusicDecoded(m);
+  if (!playing || Music.on) return;
+  Music.t0 = curT; Music.c0 = ctx.currentTime + 0.06;
+  Music.nodes = scheduleMusic(ctx, Music.master, m, curT, Music.c0);
+  Music.on = true;
+}
+function musicStop(){
+  for (const n of Music.nodes) try { n.stop(); } catch(e){}
+  Music.nodes = []; Music.on = false;
+  if (Music.ctx && Music.ctx.state === 'suspended') Music.ctx.resume().catch(() => {});
+}
+const musicClock = () => Music.on ? Music.t0 + Math.max(0, Music.ctx.currentTime - Music.c0) : null;
+const musicHold = hold => { if (Music.on) (hold ? Music.ctx.suspend() : Music.ctx.resume()).catch(() => {}); };
+function musicRestart(){ if (playing){ musicStop(); musicStart(); } }
+function setMuted(v){
+  Music.muted = v;
+  if (Music.master) Music.master.gain.value = v ? 0 : 1;
+  $('#mute').textContent = v ? '🔇' : '🔊';
+}
+
+/* ---- export: the whole soundtrack, rendered offline ---- */
+async function renderSoundtrack(sampleRate = 48000){
+  const m = curMusic();
+  if (!hasMusic(m)) return null;
+  await ensureMusicDecoded(m);
+  const off = new OfflineAudioContext(2, Math.ceil(TL.total*sampleRate), sampleRate);
+  scheduleMusic(off, off.destination, m, 0, 0);
+  return off.startRendering();
+}
+async function audioCodecFor(sampleRate){
+  if (!('AudioEncoder' in window)) return null;
+  for (const [codec, box] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]){
+    const cfg = { codec, sampleRate, numberOfChannels:2, bitrate:192000 };
+    try { if ((await AudioEncoder.isConfigSupported(cfg)).supported) return { cfg, box }; } catch(e){}
+  }
+  return null;
+}
+async function encodeSoundtrack(buf, enc){
+  const sr = buf.sampleRate, L = buf.getChannelData(0), R = buf.getChannelData(1), F = 4096;
+  for (let i = 0; i < buf.length && !cancelFlag; i += F){
+    const n = Math.min(F, buf.length - i), data = new Float32Array(n*2);
+    data.set(L.subarray(i, i + n), 0); data.set(R.subarray(i, i + n), n);
+    const ad = new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:2, timestamp:Math.round(i/sr*1e6), data });
+    enc.encode(ad); ad.close();
+    if (enc.encodeQueueSize > 32) await new Promise(r => setTimeout(r, 0));
+  }
+  await enc.flush();
+}
+
+/* ---- loading the music folder of a track ---- */
+async function audioFilesFromHandle(dir){
+  const out = [];
+  for await (const [name, h] of dir.entries()){
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'file'){ if (AUDIO_RE.test(name)) out.push(await h.getFile()); }
+    else out.push(...await audioFilesFromHandle(h));
+  }
+  return out;
+}
+function audioDuration(file){
+  return new Promise(res => {
+    const a = new Audio(), url = URL.createObjectURL(file);
+    let done = false;
+    const fin = d => { if (done) return; done = true; URL.revokeObjectURL(url); a.removeAttribute('src'); res(Number.isFinite(d) ? d : 0); };
+    a.preload = 'metadata'; a.onloadedmetadata = () => fin(a.duration); a.onerror = () => fin(0);
+    setTimeout(() => fin(0), 8000);
+    a.src = url;
+  });
+}
+/* Keeps the saved order and settings (by file name); new files go last, by name. */
+async function loadMusic(e, files, dir, rel){
+  files = [...files].filter(f => AUDIO_RE.test(f.name));
+  const m = e.music || (e.music = musicFromSaved());
+  releaseMusic(m);
+  const saved = m.items.length ? m.items : m.saved, byName = new Map(saved.map((s, i) => [s.name, { s, i }]));
+  files.sort((a, b) => {
+    const x = byName.get(a.name), y = byName.get(b.name);
+    if (x && y) return x.i - y.i;
+    if (x || y) return x ? -1 : 1;
+    return a.name.localeCompare(b.name, 'en', { numeric:true });
+  });
+  m.items = await Promise.all(files.map(async f => {
+    const s = byName.get(f.name)?.s || {};
+    return { name:f.name, file:f, dur:await audioDuration(f), on:s.on ?? true, vol:s.vol ?? 1, fin:s.fin ?? 0, fout:s.fout ?? 0 };
+  }));
+  m.saved = [];
+  m.dir = dir || null;
+  if (rel != null) m.folder = rel;
+  if (e === activeEntry()){ renderMusicPanel(); musicRestart(); }
+  renderTrackList();
+  return m.items.length;
+}
+async function pickMusicFolder(){
+  const e = activeEntry();
+  if (!e){ toast('Load a GPX track first.', true); return; }
+  if (!HAS_FSA){ $('#musicDirInput').click(); return; }
+  let dir;
+  try { dir = await showDirectoryPicker({ id:'gpxcine-music', mode:'read', startIn: projectDir || 'music' }); }
+  catch(err){ if (err.name !== 'AbortError') toast('Folder not accessible: ' + err.message, true); return; }
+  const files = await audioFilesFromHandle(dir);
+  if (!files.length){ toast(`No audio files (mp3, m4a, wav, ogg…) in “${dir.name}”.`, true); return; }
+  const rel = projectDir ? await projectDir.resolve(dir) : null;
+  const n = await loadMusic(e, files, dir, rel ? rel.join('/') : dir.name);
+  toast(`${n} song(s) for “${e.title || e.gpxName}”` + (projectDir && !rel ? ` — tip: put “${dir.name}” inside the project folder so it reloads automatically` : ''));
+}
+/* On opening a project: the folder noted in the project, otherwise a folder
+   bearing the track's name or date that contains audio files (a folder under
+   “music” / “audio” wins over one that happens to hold a stray mp3). */
+async function autoLoadMusic(dirs){
+  let n = 0;
+  const musicy = d => /music|musique|audio|sound|son/i.test(d.path.join('/')) ? 1 : 0;
+  for (const t of tracks){
+    const m = t.music || (t.music = musicFromSaved());
+    if (m.items.length) continue;
+    const cands = [];
+    if (m.folder){ try { cands.push({ h:await dirAtPath(projectDir, m.folder), path:m.folder.split('/') }); } catch(e){} }
+    cands.push(...dirs.filter(d => trackMatchesName(t, d.h.name)).sort((a, b) => musicy(b) - musicy(a)));
+    for (const c of cands){
+      const fs = await audioFilesFromHandle(c.h);
+      if (fs.length){ await loadMusic(t, fs, c.h, c.path.join('/')); n++; break; }
+    }
+  }
+  return n;
+}
+
+/* ---- the 🎵 Soundtrack tab ---- */
+const MUSIC_COLORS = ['#5b9df0', '#e0823d', '#58c08a', '#c878e0', '#e0c24a', '#e0607a', '#4ac6d0'];
+let musicSel = -1, mtl = null;             // selected song, timeline cache
+function renderMusicPanel(){
+  const m = curMusic(), box = $('#mList');
+  if (!box) return;
+  $('#mVol').value = Math.round((m ? m.vol : MUSIC_DEFAULTS.vol)*100);
+  $('#mVolV').textContent = $('#mVol').value + '%';
+  $('#mXfade').value = fmt(m ? m.xfade : MUSIC_DEFAULTS.xfade, 1);
+  $('#mEnd').value = fmt(m ? m.endFade : MUSIC_DEFAULTS.endFade, 1);
+  $('#mLoop').checked = !!(m && m.loop);
+  $('#musicInfo').textContent = !m || !m.items.length
+    ? (m && m.saved.length ? `⚠ ${m.saved.length} song(s) in the project: choose the folder${m.folder ? ' “' + m.folder + '”' : ''} again` : 'No music for this track yet.')
+    : `${m.items.length} song(s)` + (m.folder ? ` · folder “${m.folder}”` : '');
+  box.innerHTML = '';
+  const plan = musicPlan(m), T = TL.total;
+  (m ? m.items : []).forEach((it, i) => {
+    const row = document.createElement('div');
+    row.className = 'mrow' + (i === musicSel ? ' sel' : '') + (it.on ? '' : ' off');
+    row.draggable = true; row.dataset.i = i;
+    const ps = plan.filter(s => s.it === it && s.start < T);
+    const when = !it.on ? 'off' : ps.length ? ps.map(s => mmss(s.start)).join(', ') : 'not reached';
+    row.innerHTML = `<span class="grip" title="Drag to reorder">≡</span>
+      <span class="sw" style="background:${MUSIC_COLORS[i % MUSIC_COLORS.length]}"></span>
+      <input type="checkbox" title="Use this song" ${it.on ? 'checked' : ''}>
+      <span class="nm"></span>
+      <span class="du">${it.bad ? 'unreadable' : mmss(it.dur)}</span>
+      <span class="at" title="Starts at (video time)">▶ ${when}</span>
+      <label title="Song volume">Vol <input type="range" class="v" min="0" max="150" value="${Math.round((it.vol ?? 1)*100)}"><b>${Math.round((it.vol ?? 1)*100)}%</b></label>
+      <label title="Fade in (s)">Fade in <input type="text" class="fi" value="${fmt(it.fin || 0, 1)}"></label>
+      <label title="Fade out (s)">out <input type="text" class="fo" value="${fmt(it.fout || 0, 1)}"></label>
+      <button class="up" title="Move up">▲</button><button class="dn" title="Move down">▼</button>`;
+    row.querySelector('.nm').textContent = it.name.replace(/\.[^.]+$/, '');
+    row.querySelector('.nm').title = it.name;
+    const upd = () => { renderMusicPanel(); musicRestart(); };
+    row.querySelector('input[type=checkbox]').onchange = ev => { it.on = ev.target.checked; upd(); };
+    const v = row.querySelector('.v');
+    v.oninput = () => { it.vol = v.value/100; v.nextElementSibling.textContent = v.value + '%'; drawMusicTimeline(true); };
+    v.onchange = () => musicRestart();
+    const num = (sel, key) => { const inp = row.querySelector(sel); inp.onchange = () => {
+      const x = parseFloat(inp.value.replace(',', '.'));
+      it[key] = Number.isFinite(x) ? clamp(x, 0, 30) : 0; upd(); }; };
+    num('.fi', 'fin'); num('.fo', 'fout');
+    const move = d => { const j = i + d; if (j < 0 || j >= m.items.length) return; [m.items[i], m.items[j]] = [m.items[j], m.items[i]]; musicSel = j; upd(); };
+    row.querySelector('.up').onclick = () => move(-1);
+    row.querySelector('.dn').onclick = () => move(1);
+    row.onclick = ev => { if (ev.target.closest('input,button,label')) return; musicSel = i; renderMusicPanel(); };
+    // drag & drop reordering
+    row.ondragstart = ev => { ev.dataTransfer.setData('text/plain', String(i)); ev.dataTransfer.effectAllowed = 'move'; row.classList.add('drag'); };
+    row.ondragend = () => row.classList.remove('drag');
+    row.ondragover = ev => { ev.preventDefault(); row.classList.add('over'); };
+    row.ondragleave = () => row.classList.remove('over');
+    row.ondrop = ev => {
+      ev.preventDefault(); row.classList.remove('over');
+      const from = +ev.dataTransfer.getData('text/plain'); if (!Number.isFinite(from) || from === i) return;
+      const [x] = m.items.splice(from, 1); m.items.splice(i, 0, x); musicSel = i; upd();
+    };
+    box.appendChild(row);
+  });
+  if (m && m.items.length){
+    const used = plan.filter(s => s.start < T), end = used.length ? Math.min(T, used[used.length-1].end) : 0;
+    const note = document.createElement('div'); note.className = 'mnote';
+    note.textContent = !used.length ? 'No song enabled.'
+      : end < T - 0.5 ? `The music stops at ${mmss(end)}, before the end of the video (${mmss(T)}): add songs or tick Loop.`
+      : `The music covers the whole video (${mmss(T)}), with a ${fmt(m.endFade, 1)} s fade-out at the end.`;
+    box.appendChild(note);
+  }
+  drawMusicTimeline(true);
+  ensureMusicDecoded(m).then(() => { if (tab === 'music' && curMusic() === m) drawMusicTimeline(true); });
+}
+/* Timeline: ruler, the video (intro / route / outro, photo and clip stops,
+   waypoints), then the songs on two alternating lanes so that crossfades
+   show as overlaps, with their waveform and volume envelope. */
+function drawMusicTimeline(rebuild){
+  const cv = $('#mTL'); if (!cv || tab !== 'music') return;
+  const dpr = devicePixelRatio || 1;
+  const Wc = Math.max(200, cv.parentElement.clientWidth), Hc = 30 + 50 + 8 + 2*50;
+  if (cv.width !== Math.round(Wc*dpr) || cv.height !== Math.round(Hc*dpr)){
+    cv.width = Math.round(Wc*dpr); cv.height = Math.round(Hc*dpr); rebuild = true;
+  }
+  const T = TL.total, m = curMusic();
+  const sig = [T, TL.intro, TL.outro, photoPlan.length, Wc, m && m.vol, m && m.xfade, m && m.endFade, m && m.loop,
+               m && m.items.map(i => [i.name, i.on, i.vol, i.fin, i.fout, !!i.peaks, i.dur]).join(), musicSel,
+               document.documentElement.dataset.theme].join('|');
+  if (rebuild || !mtl || mtl.sig !== sig){
+    const base = document.createElement('canvas');
+    base.width = cv.width; base.height = cv.height;
+    const g = base.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const css = getComputedStyle(document.documentElement);
+    const txt = css.getPropertyValue('--txt').trim(), muted = css.getPropertyValue('--muted').trim(), line = css.getPropertyValue('--line').trim();
+    const X = t => 8 + (Wc - 16) * clamp(t / T, 0, 1), Tt = x => (x - 8) / (Wc - 16) * T;
+    // ruler
+    g.font = '10px system-ui'; g.fillStyle = muted; g.textAlign = 'left';
+    const step = [5, 10, 15, 30, 60, 120, 300].find(s => (Wc - 16) / (T / s) > 60) || 600;
+    for (let t = 0; t <= T + 1e-6; t += step){ g.fillRect(X(t), 18, 1, 8); g.fillText(mmss(t), X(t) + 3, 14); }
+    // video lane
+    const vy = 30, vh = 50;
+    const phase = (a, b, c) => { g.fillStyle = c; g.fillRect(X(a), vy, X(b) - X(a), vh); };
+    phase(0, TL.intro, '#5a6a8655'); phase(TL.intro, TL.intro + TL.travel, ACCENT() + '44'); phase(TL.intro + TL.travel, T, '#5a6a8655');
+    g.fillStyle = txt; g.font = '600 10px system-ui'; g.fillText('VIDEO', X(0) + 4, vy + 12);
+    for (const w of wpTimes()){
+      if (!Number.isFinite(w.tReach)) continue;
+      g.fillStyle = colorAt(w.d); g.fillRect(X(w.tReach) - 1, vy, 2, vh);
+      g.fillStyle = muted; g.font = '9px system-ui'; g.fillText(w.name, X(w.tReach) + 3, vy + vh - 4);
+    }
+    for (const e of photoPlan){
+      const a = X(TL.intro + e.t0), b = X(TL.intro + e.t1), p = e.photo;
+      g.fillStyle = p.kind === 'video' ? '#c878e0aa' : '#7fd3ffaa'; g.fillRect(a, vy + 16, Math.max(2, b - a), vh - 30);
+      if (p.thumb && b - a > 16){
+        const im = p._ti || (p._ti = Object.assign(new Image(), { src:p.thumb }));
+        if (!im.complete) im.onload = () => drawMusicTimeline(true);
+        else if (im.naturalWidth){
+          const h = vh - 32, w = Math.min(b - a - 2, h * im.naturalWidth / im.naturalHeight);
+          g.drawImage(im, a + 1, vy + 17, w, h);
+        }
+      }
+    }
+    // song lanes
+    const plan = musicPlan(m), ly = [vy + vh + 8, vy + vh + 8 + 50], lh = 44;
+    for (const y of ly){ g.fillStyle = line; g.fillRect(8, y + lh/2, Wc - 16, 1); }
+    if (!plan.length){
+      g.fillStyle = muted; g.font = '12px system-ui';
+      g.fillText(m && m.items.length ? 'No song enabled.' : 'No music: choose this track’s music folder (📁 Music folder).', 16, ly[0] + 26);
+    }
+    plan.forEach((s, i) => {
+      if (s.start >= T) return;
+      const y = ly[i % 2], a = X(s.start), b = X(Math.min(s.end, T)), idx = m.items.indexOf(s.it);
+      const col = MUSIC_COLORS[idx % MUSIC_COLORS.length];
+      g.fillStyle = col + '30'; g.strokeStyle = idx === musicSel ? txt : col; g.lineWidth = idx === musicSel ? 2 : 1;
+      g.beginPath(); if (g.roundRect) g.roundRect(a, y, b - a, lh, 6); else g.rect(a, y, b - a, lh); g.fill(); g.stroke();
+      g.save(); g.beginPath(); g.rect(a, y, b - a, lh); g.clip();
+      if (s.it.peaks){                     // waveform, scaled by the envelope: what you actually hear
+        const pk = s.it.peaks, n = pk.length; g.fillStyle = col + 'cc';
+        for (let x = Math.floor(a); x < b; x++){
+          const tt = Tt(x), j = Math.floor((tt - s.start) / s.it.dur * n);
+          if (j < 0 || j >= n) continue;
+          const amp = pk[j] * Math.min(1.5, segGain(m, s, tt)) / 1.5 * (lh/2 - 3);
+          g.fillRect(x, y + lh/2 - amp, 1, Math.max(1, 2*amp));
+        }
+      } else { g.fillStyle = muted; g.font = '10px system-ui'; g.fillText(s.it.bad ? 'unreadable' : 'decoding…', a + 6, y + lh - 6); }
+      g.strokeStyle = txt; g.lineWidth = 1.2; g.beginPath();          // volume envelope
+      for (let x = Math.floor(a); x <= b; x += 2){
+        const v = Math.min(1.5, segGain(m, s, Tt(x))) / 1.5, yy = y + lh - 2 - v*(lh - 4);
+        x === Math.floor(a) ? g.moveTo(x, yy) : g.lineTo(x, yy);
+      }
+      g.stroke();
+      g.fillStyle = txt; g.font = '600 10px system-ui'; g.fillText(`${idx + 1} · ${s.it.name.replace(/\.[^.]+$/, '')}`, a + 6, y + 12);
+      g.restore();
+    });
+    mtl = { sig, base, X, Tt, plan, ly, lh, Wc, Hc };
+  }
+  const c = cv.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height); c.drawImage(mtl.base, 0, 0);
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const x = mtl.X(curT);
+  c.fillStyle = '#ff5a5a'; c.fillRect(x - 1, 0, 2, Hc);
+  c.beginPath(); c.moveTo(x - 5, 0); c.lineTo(x + 5, 0); c.lineTo(x, 7); c.closePath(); c.fill();
+}
+function initMusicTab(){
+  const cv = $('#mTL');
+  let drag = false;
+  const tAt = ev => { const r = cv.getBoundingClientRect(); return clamp((ev.clientX - r.left - 8) / (r.width - 16), 0, 1) * TL.total; };
+  const seek = t => {
+    curT = t;
+    if (playing){ laReset(curT); musicRestart(); } else renderPreview();
+    drawMusicTimeline();
+  };
+  cv.addEventListener('pointerdown', ev => {
+    if (!track) return;
+    const t = tAt(ev);
+    if (mtl){                               // click on a song block: select it too
+      const y = ev.clientY - cv.getBoundingClientRect().top;
+      const hit = mtl.plan.findIndex((s, i) => t >= s.start && t <= s.end && y >= mtl.ly[i % 2] && y <= mtl.ly[i % 2] + mtl.lh);
+      if (hit >= 0){ musicSel = curMusic().items.indexOf(mtl.plan[hit].it); renderMusicPanel(); }
+    }
+    drag = true; cv.setPointerCapture(ev.pointerId); seek(t);
+  });
+  cv.addEventListener('pointermove', ev => { if (drag) seek(tAt(ev)); });
+  cv.addEventListener('pointerup', () => { drag = false; });
+  const setting = (id, key, parse) => $('#'+id).addEventListener('change', () => {
+    const m = curMusic(); if (!m) return;
+    m[key] = parse($('#'+id)); renderMusicPanel(); musicRestart();
+  });
+  const num = (lo, hi) => el => { const x = parseFloat(el.value.replace(',', '.')); return Number.isFinite(x) ? clamp(x, lo, hi) : 0; };
+  setting('mXfade', 'xfade', num(0, 30));
+  setting('mEnd', 'endFade', num(0, 60));
+  setting('mLoop', 'loop', el => el.checked);
+  $('#mVol').addEventListener('input', () => {
+    const m = curMusic(); if (!m) return;
+    m.vol = $('#mVol').value/100; $('#mVolV').textContent = $('#mVol').value + '%'; drawMusicTimeline(true);
+  });
+  $('#mVol').addEventListener('change', musicRestart);
+  $('#musicFolder').onclick = pickMusicFolder;
+  $('#musicDirInput').onchange = async ev => {
+    const e = activeEntry(); if (!e) return;
+    const files = [...ev.target.files]; ev.target.value = '';
+    const rel = files[0] && files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : '';
+    const n = await loadMusic(e, files, null, rel);
+    toast(`${n} song(s) for “${e.title || e.gpxName}”`);
+  };
+  $('#mute').onclick = () => setMuted(!Music.muted);
+  new ResizeObserver(() => drawMusicTimeline(true)).observe(cv.parentElement);
 }
 </script>
 
@@ -4995,6 +5546,7 @@ $('#themeBtn').onclick = () => {
   applyTheme(theme);
 };
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (theme === 'auto') applyTheme('auto'); });
+initMusicTab();
 $('#openProject').onclick = openProjectFlow;
 $('#reopenProject').onclick = reopenLastProject;
 updateReopen();

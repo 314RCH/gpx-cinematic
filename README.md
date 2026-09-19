@@ -64,6 +64,8 @@ The tracks appear in a list; clicking one makes it **active**.
   vertical strip of thumbnails. “🖈 Place on map” opens this tab in
   waypoint-adding mode.
 - **✂ Clips**: trimming of the active track’s video clips (see below).
+- **🎵 Soundtrack**: the active track’s music, on a timeline under the video
+  (see below).
 
 **Theme**: the button at the top right of the panel switches the interface
 between ◐ Auto (follows the system setting), ☀ Light and ☾ Dark. The choice
@@ -211,6 +213,43 @@ turns on the same file: while one plays a segment, the other is already
 waiting, cued to the next one, which gives clean cuts and makes crossfades
 possible.
 
+## Soundtrack (🎵 Soundtrack tab)
+
+Each track has its own music: a folder of audio files (mp3, m4a, aac, wav,
+ogg, opus, flac), for example `music/20260816/` next to `photos/20260816/`.
+**📁 Music folder** picks it; when a project is opened, it is found again
+automatically (the folder recorded in the project, otherwise a folder named
+after the GPX’s name or date that contains audio files — a folder under
+`music/` or `audio/` wins). The track list shows 🎵 with the number of songs.
+
+The tab keeps the video preview on top and shows below it:
+- a **timeline**: time ruler, then the video — intro / route / outro,
+  waypoints, photo and clip stops with their thumbnails — then the songs on
+  two lanes, so that crossfades show as overlaps. Each song block shows its
+  waveform (as you will hear it) and its volume envelope. Click or drag on
+  the timeline to move the playhead; click a song to select it;
+- the **playlist**: drag ≡ (or ▲ ▼) to change the order, untick a song to
+  skip it, set its **volume** (0–150 %) and its **fade in / fade out** (s).
+  “▶ 0:17” tells when it starts in the video, “not reached” when the video
+  ends before it.
+
+Overall settings, per track: **Volume** (master), **Crossfade** (overlap
+between consecutive songs, faded out / in, 3 s by default), **End fade-out**
+(the music fades out over the last seconds of the video, 3 s by default) and
+**Loop** (the playlist starts again if it is shorter than the video). A line
+under the playlist says whether the music covers the whole video.
+
+The songs start with the video (intro included). Fades use equal-power
+curves, so a crossfade keeps a steady loudness. In the preview, the
+soundtrack plays with the picture (🔊 / 🔇 in the transport bar mutes it
+without affecting the export); playback is clocked on the audio, so picture
+and sound stay in sync, and both wait together if tiles are still loading.
+Only the songs the video actually reaches are decoded.
+
+The music is mixed into the exported MP4 as a 48 kHz stereo AAC track. The
+order, volumes, fades and settings are saved in the project; the audio files
+stay in their folder.
+
 ## Project
 
 **One project = one folder**, for example:
@@ -219,8 +258,11 @@ possible.
 replay/
 ├── full.gpxcine.json             (anywhere in the folder)
 ├── gpx/                          the original .gpx files (authoritative if they change)
-└── photos/
-    ├── 20260815/                 photos and videos from 15 August
+├── photos/
+│   ├── 20260815/                 photos and videos from 15 August
+│   └── 20260816/
+└── music/
+    ├── 20260815/                 the soundtrack of 15 August (mp3, m4a, wav…)
     └── 20260816/
 ```
 
@@ -250,8 +292,10 @@ replay/
 - Contents: GPX tracks, titles, subtitles, durations, waypoints (name,
   exact location, color), start/finish, settings, active track, and for each
   media item its hand-placed location, its inclusion choice and, for a video,
-  its edit (segments, transitions, transition duration). The photo/video
-  files themselves stay in their folders.
+  its edit (segments, transitions, transition duration), plus each track’s
+  roads and soundtrack (music folder, order, volumes, fades, crossfade, end
+  fade-out, loop). The photo, video and audio files themselves stay in their
+  folders.
 - Opening and saving to a folder require Chrome or Edge. Elsewhere: a `.json`
   file is opened, saving is done by download, and media folders must be
   chosen again (⚠ in the track list).
@@ -377,7 +421,8 @@ frame-by-frame export is identical to the preview.
 
 ## Export
 
-- MP4 H.264 1920×1080, 24/30/60 fps, 8 to 28 Mbps.
+- MP4 H.264 1920×1080, 24/30/60 fps, 8 to 28 Mbps, with the soundtrack as
+  a 48 kHz stereo AAC track (192 kbps) when the track has music.
 - Deterministic rendering: each frame waits for tiles to be fully loaded,
   no blurry tiles or stutter. Export continues if the window goes into the
   background.
