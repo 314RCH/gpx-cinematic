@@ -85,6 +85,15 @@ button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
 #wpList .rst:hover{color:var(--txt)}
 #wpList .del{flex:0 0 auto;padding:3px 7px;line-height:1;color:var(--muted);border-color:transparent;background:transparent;font-size:15px}
 #wpList .del:hover{color:var(--err);background:#f871711a}
+#roadList{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+#roadList li{display:flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 6px}
+#roadList li.cur{border-color:#4d7ab8}
+#roadList input[type=text]{margin:0;border:none;background:transparent;padding:2px 4px;font-size:12px}
+#roadList input.km{flex:0 0 58px;margin:0;border:none;background:transparent;padding:2px 2px;font-size:11.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+#roadList .go,#roadList .del{flex:0 0 auto;padding:3px 6px;line-height:1;color:var(--muted);border-color:transparent;background:transparent;font-size:12px}
+#roadList .del{font-size:15px}
+#roadList .go:hover{color:var(--txt)}
+#roadList .del:hover{color:var(--err);background:#f871711a}
 .hint{font-size:11px;color:var(--muted);margin:8px 0 0;line-height:1.5}
 .bar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:9px}
 .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .1s linear}
@@ -106,6 +115,11 @@ button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
   font-size:12px;backdrop-filter:blur(8px)
 }
 #viewport.editing #editBadge{display:block}
+#buffering{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;display:none;
+  background:#1a2130d9;border:1px solid #ffffff30;color:#dfe8f5;padding:6px 14px;border-radius:99px;
+  font-size:12px;backdrop-filter:blur(8px);pointer-events:none
+}
 #transport{display:flex;align-items:center;gap:12px;flex:0 0 auto}
 #transport button{width:38px;height:34px;display:grid;place-items:center;padding:0;font-size:13px}
 #scrub{flex:1;accent-color:var(--accent);height:4px}
@@ -119,6 +133,54 @@ button.on{background:#2b3c57;border-color:#4d7ab8;color:#cfe2ff}
 #photoStrip{flex:0 0 236px;min-height:0;display:none;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 body.tab-map #photoStrip{display:flex}
 body.tab-map #transport{visibility:hidden}
+/* l'aperçu reste en page (hors champ) : la carte garde sa taille et peut toujours rendre */
+body.tab-clips #vpWrap{position:fixed;left:-20000px;top:0;width:960px;height:540px;visibility:hidden}
+body.tab-clips #transport{display:none}
+#clipEditor{flex:1;min-width:0;min-height:0;display:none;gap:12px}
+body.tab-clips #clipEditor{display:flex}
+#clipList{flex:0 0 250px;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px}
+#clipList .ci{display:flex;gap:8px;align-items:center;padding:5px;border:1px solid transparent;border-radius:8px;cursor:pointer}
+#clipList .ci:hover{background:var(--panel2)}
+#clipList .ci.on{background:#243044;border-color:#4d7ab8}
+#clipList .ci img,#clipList .ci .noimg{flex:0 0 72px;width:72px;height:44px;object-fit:cover;border-radius:5px;background:#000}
+#clipList .ci .t{min-width:0;font-size:11.5px;line-height:1.35}
+#clipList .ci .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clipList .ci .t span{color:var(--muted)}
+#clipList .ci .t .cut{color:var(--accent)}
+#clipList .empty{color:var(--muted);font-size:12px;padding:10px;line-height:1.5}
+#clipMain{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+#clipStage{flex:1;min-height:0;background:#000;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+#clipStage video,#clipStage canvas{max-width:100%;max-height:100%;display:block}
+#clipStage canvas{display:none}
+#clipStage.montage video{display:none}
+#clipStage.montage canvas{display:block}
+#clipStage .msg{color:var(--muted);font-size:13px}
+#clipTL{position:relative;height:58px;border-radius:8px;background:#0a0d12 center/100% 100% no-repeat;border:1px solid var(--line);cursor:pointer;user-select:none;touch-action:none}
+#clipSegs .dim{position:absolute;top:0;bottom:0;background:rgba(5,7,10,.72);pointer-events:none}
+#clipSegs .seg{position:absolute;top:-1px;bottom:-1px;border:2px solid #ffd23f99;border-radius:6px;cursor:pointer}
+#clipSegs .seg.on{border-color:var(--accent);box-shadow:0 0 0 1px #0008,inset 0 0 0 1px #0006}
+#clipSegs .seg span{position:absolute;left:4px;top:2px;font-size:10px;font-weight:700;color:#111;background:var(--accent);border-radius:3px;padding:0 4px;pointer-events:none}
+#clipSegs .h{position:absolute;top:-6px;bottom:-6px;width:12px;margin-left:-6px;background:var(--accent);border-radius:4px;cursor:ew-resize;box-shadow:0 1px 6px #0008;z-index:2}
+#clipSegs .h::after{content:'';position:absolute;left:4px;top:35%;bottom:35%;width:4px;border-left:1.5px solid #0006;border-right:1.5px solid #0006;pointer-events:none}
+#clipSegs .x{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;color:#111;font-size:10px;display:grid;place-items:center;z-index:3;pointer-events:none;box-shadow:0 1px 4px #000a}
+#clipTL .ph{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:#fff;pointer-events:none;box-shadow:0 0 4px #000}
+#clipBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#clipBar button{padding:6px 10px;font-size:12px;width:auto;margin:0}
+#clipBar .num{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted)}
+#clipBar .num input{width:64px;margin:0;padding:4px 6px;font-variant-numeric:tabular-nums}
+#clipBar .sp{flex:1}
+#clipBar .grp2{display:flex;gap:4px;flex-wrap:wrap}
+#clipBar .pri{border-color:#4d7ab8;background:#243044}
+#clipSegList{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11.5px}
+#clipSegList .sg{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);cursor:pointer;font-variant-numeric:tabular-nums}
+#clipSegList .sg.on{border-color:var(--accent)}
+#clipSegList .sg b{color:var(--accent)}
+#clipSegList select{width:auto;margin:0;padding:3px 4px;font-size:11px}
+#clipSegList label{display:flex;align-items:center;gap:4px;color:var(--muted);margin-left:auto}
+#clipSegList label input{width:54px;margin:0;padding:3px 5px}
+#clipInfo{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#clipInfo b{color:var(--txt)}
+#reopenProject{display:none}
 #photoStrip .head{padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
 #photoStrip .head #photoCount{float:right;text-transform:none;letter-spacing:0}
 #photoStrip .head #stripTitle{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
@@ -177,6 +239,7 @@ body.tab-map #transport{visibility:hidden}
       <button id="openProject" title="Choisir le dossier du projet : le fichier .gpxcine.json et les dossiers de photos/vidéos sont retrouvés automatiquement">📂 Ouvrir</button>
       <button id="saveProject" title="Enregistrer le projet (⌘S)">💾 Enregistrer</button>
     </div>
+    <button id="reopenProject" style="width:100%;margin-top:6px"></button>
     <p id="projectInfo">Aucun projet ouvert</p>
     <input type="file" id="projectFile" accept=".json,.gpx,application/json" multiple hidden>
   </div>
@@ -208,6 +271,7 @@ body.tab-map #transport{visibility:hidden}
     <label class="chk" style="margin-top:6px" title="Le dénivelé calculé sur un itinéraire planifié (altitudes tirées d’un modèle de terrain) est souvent surestimé : à réserver aux traces enregistrées avec un altimètre."><input type="checkbox" id="showGain"> Afficher le dénivelé positif</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showCompass" checked> Rose des vents</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showMinimap" checked> Mini-carte (nord en haut)</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="showRoad" checked> Route empruntée (sous la mini-carte)</label>
   </section>
 
   <section class="grp">
@@ -278,6 +342,16 @@ body.tab-map #transport{visibility:hidden}
   </section>
 
   <section class="grp">
+    <h3>Routes</h3>
+    <div class="row">
+      <button id="roadHere" title="Nouvelle route à partir de la position de la tête de lecture">+ À la position</button>
+      <button id="roadDetect" title="Propose les routes d’après OpenStreetMap (la trace est envoyée à overpass-api.de)">🛣 Détecter (OSM)</button>
+    </div>
+    <ul id="roadList"></ul>
+    <p class="hint">Chaque ligne donne la route suivie <b>à partir de ce km</b>, jusqu’à la ligne suivante. Placez la tête de lecture où la route change, puis « + À la position ». Écrivez <code>1 · Hringvegur</code> ou <code>D902 · Col du Galibier</code> : le numéro s’affiche dans un cartouche. Nom vide : rien n’est affiché sur ce tronçon.</p>
+  </section>
+
+  <section class="grp">
     <h3>Photos &amp; vidéos de la trace</h3>
     <div class="row">
       <button id="openPhotos">📁 Dossier de la trace active</button>
@@ -291,10 +365,6 @@ body.tab-map #transport{visibility:hidden}
       <label>Écart max. (m)<input type="number" id="photoMaxDist" value="200" min="20" max="5000" step="10"></label>
     </div>
     <div class="row">
-      <label>Vidéo max. (s)<input type="number" id="clipMax" value="12" min="2" max="120" step="1"></label>
-      <label></label>
-    </div>
-    <div class="row">
       <label>Présentation<select id="photoStyle">
         <option value="feature">Mise en avant</option>
         <option value="frame">Encadré discret</option>
@@ -302,7 +372,7 @@ body.tab-map #transport{visibility:hidden}
       <label title="Écart entre l’horloge de l’appareil et l’UTC, pour caler les photos sur l’heure du GPX. Vide : automatique.">Horloge − UTC (h)<input type="text" id="photoClock" placeholder="auto"></label>
     </div>
     <button id="photoByTime" style="width:100%;margin:2px 0 10px">🕒 Proposer les positions par l’heure</button>
-    <label class="chk"><input type="checkbox" id="photoSlow" checked> Ralentir le point aux photos</label>
+    <label class="chk"><input type="checkbox" id="photoSlow" checked> Arrêter le point pendant les photos et vidéos</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="showPhotos" checked> Photos et vidéos dans la vidéo</label>
   </section>
 
@@ -334,6 +404,7 @@ body.tab-map #transport{visibility:hidden}
   <div id="tabs">
     <button class="tab on" data-tab="video">🎬 Vidéo</button>
     <button class="tab" data-tab="map">🗺 Carte &amp; photos</button>
+    <button class="tab" data-tab="clips">✂ Vidéos</button>
   </div>
   <div id="work">
     <div id="vpWrap">
@@ -341,6 +412,7 @@ body.tab-map #transport{visibility:hidden}
         <div id="mapScaler"><div id="map"></div></div>
         <canvas id="view" width="1920" height="1080"></canvas>
         <div id="editBadge"></div>
+        <div id="buffering">Chargement des tuiles…</div>
       </div>
     </div>
     <aside id="photoStrip">
@@ -352,6 +424,31 @@ body.tab-map #transport{visibility:hidden}
       </div>
       <div id="photoList"></div>
     </aside>
+    <div id="clipEditor">
+      <div id="clipList"></div>
+      <div id="clipMain">
+        <div id="clipStage"><video id="clipVid" playsinline preload="auto"></video><canvas id="clipCanvas"></canvas><div class="msg" id="clipMsg"></div></div>
+        <div id="clipTL" title="Cliquer pour se placer · glisser les poignées pour ajuster un segment"><div id="clipSegs"></div><div class="ph" id="clipPH"></div></div>
+        <div id="clipBar">
+          <button id="clipPlay" title="Lecture / pause de la vidéo d’origine (espace)">▶</button>
+          <button id="clipBack" title="−1 s (⇧← : −1 image)">⏪</button>
+          <button id="clipFwd" title="+1 s (⇧→ : +1 image)">⏩</button>
+          <span class="grp2">
+            <button id="clipSetIn" title="Début du segment à la position courante (touche I)">⟦ Début ici</button>
+            <button id="clipSetOut" title="Fin du segment à la position courante (touche O)">Fin ici ⟧</button>
+            <button id="clipSplit" title="Couper le segment à la position courante (touche S)">✂ Couper ici</button>
+            <button id="clipAdd" title="Nouveau segment à partir de la position courante (hors des segments existants)">✚ Segment ici</button>
+            <button id="clipDel" title="Supprimer le segment sélectionné (Suppr)">🗑 Segment</button>
+            <button id="clipReset" title="Revenir au clip entier">↺ Tout</button>
+          </span>
+          <span class="sp"></span>
+          <button id="clipMontage" class="pri" title="Lire le montage tel qu’il apparaîtra dans la vidéo : segments et raccords">▶ Montage</button>
+          <button id="clipMute" title="Son de l’éditeur (la vidéo exportée est muette)">🔇</button>
+        </div>
+        <div id="clipSegList"></div>
+        <div id="clipInfo"></div>
+      </div>
+    </div>
   </div>
   <div id="transport">
     <button id="play" title="Lecture / pause">▶</button>
@@ -777,6 +874,7 @@ let currentBasemap = INITIAL_BASEMAP;
 function setBasemap(key){
   currentBasemap = key;
   map.setStyle(buildStyle(key));
+  if (playing) laReset(curT);
   map.once('styledata', ()=>{
     addRouteLayers(); applyTerrain(); pushRoute(); refreshAccent(); lastDoneIdx=-1;
     mini = null; scheduleMinimap();
@@ -832,6 +930,13 @@ function invalidateOverview(){ overviewCam = null; }
 function getOverview(){
   if (overviewCam || !track) return overviewCam;
   const c = map.cameraForBounds(track.bounds, {padding:{top:130,bottom:150,left:170,right:170}, bearing:0, pitch:0});
+  if (!c){
+    // carte pas encore dimensionnée (page en cours de chargement) : cadrage
+    // calculé à la main, sans le garder en cache
+    const [[w0,s0],[e0,n0]] = track.bounds;
+    const z = Math.log2(Math.min(1580/(Math.max(1e-9, mercX(e0) - mercX(w0))*512), 800/(Math.max(1e-9, mercY(s0) - mercY(n0))*512)));
+    return { center:[(w0+e0)/2, (s0+n0)/2], zoom:Math.min(z, 16.5), bearing:0, pitch:0, padding:{top:0,bottom:0,left:0,right:0} };
+  }
   overviewCam = { center:[c.center.lng, c.center.lat], zoom:Math.min(c.zoom, 16.5), bearing:0, pitch:0, padding:{top:0,bottom:0,left:0,right:0} };
   return overviewCam;
 }
@@ -864,60 +969,95 @@ function distAtProgress(p){
 
 /* ---------------------------------------------------------------------------
    Arrêts photo.
-   Les photos retenues sont regroupées par zone (moins de max(150 m, 2 % de la
-   trace) entre deux photos consécutives). Chaque groupe de n photos ajoute
-   environ n × durée × 0,85 s au parcours, réparti autour de la zone par une
-   marche en cosinus : le point décélère, traverse lentement la zone pendant que
-   les photos défilent, puis réaccélère, sans aucun à-coup. Les photos d'un
-   groupe s'enchaînent, centrées sur le passage du point au milieu de la zone.
+   Les photos retenues sont regroupées quand elles sont très proches (moins de
+   150 m, ou moins d'une seconde de parcours d'écart). À l'arrivée sur le
+   premier média d'un groupe, le point freine franchement (≈ 0,8 s), s'ARRÊTE
+   pendant tout l'affichage — durée des photos, lecture complète des vidéos,
+   envol et retour compris — puis repart en douceur. La chronologie est
+   construite dans le domaine du temps : t → temps de base s → distance.
+   Freinage et relance suivent un profil de vitesse en cosinus (sans à-coup).
 --------------------------------------------------------------------------- */
 let photoPlan = [];       // [{ photo, d, t0, t1 }] en secondes de parcours
+const STOP_RAMP = 0.4;    // temps de base consommé par le freinage (et la relance) ; durée réelle ×2
 function rebuildWarp(){
   warp = null; photoPlan = [];
   if (!track) return;
   const links = includedPhotoLinks();
   if (!links.length) return;
   const dur = Math.max(1, +$('#photoDur').value || 3.5), slow = $('#photoSlow').checked;
-  const clipMax = Math.max(1, +$('#clipMax').value || 12);
-  const itemDur = p => p.kind === 'video' ? clamp(p.duration || 5, 1, clipMax) : dur;
-
-  const gap = Math.max(150, track.total*0.02), clusters = [];
-  for (const l of links){
-    const c = clusters[clusters.length-1];
-    if (c && l.d - c.dmax <= gap){ c.items.push(l); c.dmax = l.d; }
-    else clusters.push({ items:[l], dmin:l.d, dmax:l.d });
-  }
-  // « Mise en avant » : zone étroite et tout le temps d'affichage ajouté, le
-  // point s'arrête presque. « Encadré » : zone large, simple ralentissement.
+  const itemDur = p => p.kind === 'video' ? clipLen(p) : dur;
   const feature = $('#photoStyle').value !== 'frame';
-  for (const c of clusters){
-    c.dc = (c.dmin + c.dmax)/2;
-    c.w = feature ? clamp((c.dmax - c.dmin)/2 + 60, 40, Math.max(40, track.total/2))
-                  : clamp((c.dmax - c.dmin)/2 + 250, 150, Math.max(150, track.total/2));
-    c.span = c.items.reduce((s, l) => s + itemDur(l.photo), 0);          // temps d'affichage du groupe
-    c.extra = !slow ? 0 : feature ? c.span + 0.8 : c.span * 0.85;
-  }
-  const M = 3000, tB = TL.travelBase, T = new Float64Array(M+1), D = new Float64Array(M+1);
-  for (let j=0; j<=M; j++){
-    const p = j/M, d = baseDistAtProgress(p);
-    let t = p*tB;
-    for (const c of clusters){
-      if (!c.extra) continue;
-      const x = (d - (c.dc - c.w)) / (2*c.w);
-      t += c.extra * (x <= 0 ? 0 : x >= 1 ? 1 : (1 - Math.cos(Math.PI*x))/2);
-    }
-    T[j] = t; D[j] = d;
-  }
-  warp = { t:T, d:D, extra:clusters.reduce((s,c)=>s+c.extra, 0), clusters };
+  const fade = feature ? FEATURE_FADE : 0.4;          // envol / fondu avant t0 et après t1
+  const tB = TL.travelBase, M = 3000;
 
-  // temps de passage au centre de chaque zone, puis enchaînement des photos
-  const timeAtD = dd => { let lo=0, hi=M; while (hi-lo>1){ const m=(lo+hi)>>1; if (D[m] < dd) lo=m; else hi=m; } return T[hi]; };
-  let cursor = 0.3;
+  // temps de base (sans arrêt) auquel le point passe à la distance d
+  const bT = new Float64Array(M+1), bD = new Float64Array(M+1);
+  for (let j=0; j<=M; j++){ bT[j] = j/M*tB; bD[j] = baseDistAtProgress(j/M); }
+  const baseTimeAtD = dd => {
+    let lo=0, hi=M; if (dd <= bD[0]) return 0; if (dd >= bD[M]) return tB;
+    while (hi-lo>1){ const m=(lo+hi)>>1; if (bD[m] < dd) lo=m; else hi=m; }
+    return lerp(bT[lo], bT[hi], (dd-bD[lo]) / ((bD[hi]-bD[lo]) || 1));
+  };
+  const baseDistAtT = t => {
+    const x = clamp(t/tB, 0, 1)*M, i = Math.min(M-1, Math.floor(x));
+    return lerp(bD[i], bD[i+1], x-i);
+  };
+
+  const clusters = [];
+  for (const l of links){
+    const s = baseTimeAtD(l.d), c = clusters[clusters.length-1];
+    if (c && (l.d - c.dmax <= 150 || s - c.smax < 1)){ c.items.push(l); c.dmax = l.d; c.smax = s; }
+    else clusters.push({ items:[l], dmin:l.d, dmax:l.d, s, smax:s });
+  }
   for (const c of clusters){
-    const n = c.items.length;
-    let t = Math.max(cursor, timeAtD(c.dc) - c.span/2);
-    c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:n }); t += du; });
-    cursor = t;
+    c.span = c.items.reduce((sum, l) => sum + itemDur(l.photo), 0);   // temps d'affichage du groupe
+    c.hold = slow ? c.span + 2*fade : 0;                              // point à l'arrêt
+  }
+
+  if (!slow){
+    // pas d'arrêt : les médias défilent autour du passage du point
+    let cursor = 0.3;
+    for (const c of clusters){
+      let t = Math.max(cursor, (c.s + baseTimeAtD(c.dmax))/2 - c.span/2);
+      c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:c.items.length }); t += du; });
+      cursor = t;
+    }
+    return;
+  }
+
+  // rampes : raccourcies si deux arrêts (ou le départ / l'arrivée) sont trop proches
+  clusters.forEach((c, k) => {
+    const before = k ? c.s - clusters[k-1].s : c.s, after = k < clusters.length-1 ? clusters[k+1].s - c.s : tB - c.s;
+    c.r = Math.max(0, Math.min(STOP_RAMP, before/2, after/2));
+  });
+  // t (temps réel de parcours) → s (temps de base)
+  const extra = clusters.reduce((sum, c) => sum + c.hold + 2*c.r, 0);
+  const sAt = t => {
+    let off = 0;
+    for (const c of clusters){
+      const a = c.s - c.r + off;                     // début du freinage
+      if (t < a) break;
+      const u1 = c.r ? (t - a)/(2*c.r) : 1;
+      if (u1 < 1) return c.s - c.r + c.r*(u1 + Math.sin(Math.PI*u1)/Math.PI);
+      const h = t - a - 2*c.r;
+      if (h < c.hold) return c.s;
+      const u2 = c.r ? (h - c.hold)/(2*c.r) : 1;
+      if (u2 < 1) return c.s + c.r*(u2 - Math.sin(Math.PI*u2)/Math.PI);
+      off += c.hold + 2*c.r;
+    }
+    return t - off;
+  };
+  const total = tB + extra, N = Math.max(M, Math.ceil(total*40));
+  const T = new Float64Array(N+1), D = new Float64Array(N+1);
+  for (let j=0; j<=N; j++){ T[j] = j/N*total; D[j] = baseDistAtT(sAt(T[j])); }
+  warp = { t:T, d:D, extra, clusters };
+
+  // médias enchaînés pendant l'arrêt, envol compris
+  let off = 0;
+  for (const c of clusters){
+    let t = c.s - c.r + off + 2*c.r + fade;
+    c.items.forEach((l, i) => { const du = itemDur(l.photo); photoPlan.push({ photo:l.photo, d:l.d, t0:t, t1:t + du, idx:i, count:c.items.length }); t += du; });
+    off += c.hold + 2*c.r;
   }
 }
 function progressForDistance(dd){
@@ -1043,6 +1183,7 @@ function camBearingAt(p){
 function computeCameraTrackSafe(){ if (track) computeCameraTrack(); }
 function rebuildMotion(){
   if (!track) return;
+  if (playing) laReset(curT);
   computeHeadings(track);
   rebuildWarp();            // avant la caméra : elle échantillonne la chronologie déformée
   computeCameraTrack();
@@ -1277,19 +1418,8 @@ async function syncVideos(f, exact){
   for (const e of photoPlan){
     const p = e.photo;
     if (p.kind !== 'video' || !p.el) continue;
-    const v = p.el;
-    if (!on || tt < e.t0 - F || tt > e.t1 + F){ if (!v.paused) v.pause(); continue; }
-    const ct = clamp(tt - e.t0, 0, Math.max(0, (p.duration || 0) - 0.05));
-    if (exact){
-      if (!v.paused) v.pause();
-      if (Math.abs(v.currentTime - ct) > 0.001) waits.push(seekVideo(v, ct));
-    } else if (playing && tt >= e.t0 && tt <= e.t1){
-      if (Math.abs(v.currentTime - ct) > 0.3) v.currentTime = ct;
-      if (v.paused) v.play().catch(() => {});
-    } else {
-      if (!v.paused) v.pause();
-      if (Math.abs(v.currentTime - ct) > 0.04) v.currentTime = ct;
-    }
+    if (!on || tt < e.t0 - F || tt > e.t1 + F){ pauseClip(p); continue; }
+    driveClip(p, tt - e.t0, exact ? 'exact' : (playing && tt >= e.t0 && tt <= e.t1 ? 'play' : 'still'), waits);
   }
   if (waits.length) await Promise.all(waits);
 }
@@ -1359,6 +1489,7 @@ function drawHUD(f){
   if (f.endA < 0.85) drawMarker(f, st, cur);
   drawRose(f);
   drawMinimap(f);
+  drawRoad(f);
   if (f.titleA > 0.01) drawTitle(f.titleA);
   if (f.hud > 0.01 && f.endA < 0.9) drawStats(f, st, cur);
   drawPhotoSpheres(f);
@@ -1807,6 +1938,79 @@ function drawMinimap(f){
   ctx.globalAlpha = 1;
 }
 
+/* ------------------------------------------------------ route empruntée */
+/* Sous la mini-carte : le numéro de la route dans un cartouche (couleurs selon
+   le préfixe : A/N rouge, D jaune, E vert…), suivi de son nom. Fondu enchaîné
+   au changement de route. */
+function roadIndexAt(d){
+  const rs = curRoads(); let k = -1;
+  for (let i=0; i<rs.length && rs[i].d <= d + 0.01; i++) k = i;
+  return k;
+}
+function parseRoad(name){
+  name = (name || '').trim();
+  const parts = name.split(/\s+[·•|—–-]\s+/), first = parts[0].trim();
+  const isRef = /^[A-Za-z]{0,3}[\s-]?\d{1,4}[A-Za-z]?$/.test(first);
+  return isRef ? { ref:first, text:parts.slice(1).join(' · ') } : { ref:null, text:name };
+}
+function shieldColors(ref){
+  const r = ref.toUpperCase().replace(/[\s-]/g, '');
+  if (/^[AN]\d/.test(r)) return ['#c8102e', '#fff'];
+  if (/^D\d/.test(r))    return ['#ffd200', '#111'];
+  if (/^E\d/.test(r))    return ['#00843d', '#fff'];
+  if (/^M\d/.test(r))    return ['#0072c6', '#fff'];
+  return ['#1f5fae', '#fff'];
+}
+function drawRoadCard(name, X, Y, a, dy){
+  const { ref, text } = parseRoad(name);
+  if ((!ref && !text) || a < 0.01) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(0, dy);
+  const Hc = 50, pad = 8;
+  ctx.font = FONT(800, 24); const rw = ref ? Math.max(36, ctx.measureText(ref).width + 22) : 26;
+  ctx.font = FONT(600, 21);
+  let t = text;
+  const maxT = 560;
+  while (t && ctx.measureText(t).width > maxT && t.length > 4) t = t.slice(0, -2);
+  if (t !== text) t = t.slice(0, -1) + '…';
+  const tw = t ? ctx.measureText(t).width : 0;
+  const w = pad + rw + (t ? 12 + tw + 14 : pad);
+  shadow(18, 0.5, 3); ctx.fillStyle = 'rgba(12,15,20,0.72)'; rrect(X, Y, w, Hc, 12); ctx.fill(); noShadow();
+  const sx = X + pad, sy = Y + 7, sh = Hc - 14;
+  if (ref){
+    const [bg, fg] = shieldColors(ref);
+    ctx.fillStyle = bg; rrect(sx, sy, rw, sh, 7); ctx.fill();
+    ctx.strokeStyle = fg === '#111' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    rrect(sx + 2.5, sy + 2.5, rw - 5, sh - 5, 5); ctx.stroke();
+    ctx.fillStyle = fg; ctx.font = FONT(800, 24); ctx.textAlign = 'center';
+    ctx.fillText(ref, sx + rw/2, sy + sh/2 + 8.5);
+  } else {                                   // pictogramme de route
+    const cx = sx + rw/2, top = sy + 4, bot = sy + sh - 4;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.moveTo(cx - 3, top); ctx.lineTo(cx + 3, top); ctx.lineTo(cx + 11, bot); ctx.lineTo(cx - 11, bot); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(12,15,20,0.9)'; ctx.lineWidth = 1.6; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(cx, top + 1); ctx.lineTo(cx, bot); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (t){
+    ctx.fillStyle = '#fff'; ctx.font = FONT(600, 21); ctx.textAlign = 'left'; shadow(6, 0.6, 1);
+    ctx.fillText(t, sx + rw + 12, Y + Hc/2 + 7.5); noShadow();
+  }
+  ctx.restore(); ctx.textAlign = 'left';
+}
+function drawRoad(f){
+  if (!$('#showRoad').checked || !curRoads().length) return;
+  const a = f.hud * (1 - f.titleA) * (1 - f.endA);
+  if (a < 0.02) return;
+  const rs = curRoads(), k = roadIndexAt(f.d);
+  if (k < 0) return;
+  const withMini = $('#showMinimap').checked && mini && mini.base && mini.track === track;
+  const X = MINI.x, Y = withMini ? MINI.y + mini.h + 14 : MINI.y;
+  // fondu enchaîné pendant 0,6 s après le changement de route
+  const tk = rs[k].d > 0.5 ? TL.intro + progressForDistance(rs[k].d)*TL.travel : -Infinity;
+  const u = easeInOut(clamp((f.t - tk)/0.6, 0, 1));
+  if (u < 1 && k > 0) drawRoadCard(rs[k-1].name, X, Y, a*(1 - u), 0);
+  drawRoadCard(rs[k].name, X, Y, a*u, (1 - u)*-12);
+}
+
 /* --------------------------------------------------- points de passage */
 function drawWaypoints(f, acc){
   ctx.textAlign='left';
@@ -1893,42 +2097,57 @@ function drawPhotoCards(f){
   for (const e of shown){
     const a = clamp((tt - (e.t0 - fade))/(2*fade), 0, 1) * clamp(((e.t1 + fade) - tt)/(2*fade), 0, 1) * fadeOut;
     if (a < 0.01) continue;
-    const src = mediaSource(e.photo);
+    const src = mediaSource(e.photo, tt - e.t0);
     if (!src) continue;                                   // décodage lancé, affichée dès qu'elle est prête
     const maxW = 540, maxH = 400, k = Math.min(maxW/src.w, maxH/src.h);
     const iw = Math.round(src.w*k), ih = Math.round(src.h*k);
-    const pad = 10, capH = 40, fw = iw + 2*pad, fh = ih + pad + capH;
+    const dt = e.photo.date, dd = U.dist(e.d), vt = src.video ? videoClock(e, tt) : null;
+    const cap0 = e.photo.caption || (dt ? dt.toLocaleDateString('fr-FR', { day:'numeric', month:'long' }) + ' · ' +
+                                          dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+                                       : e.photo.name.replace(/\.[^.]+$/, ''));
+    const info = (vt ? `▶ ${vt.txt} · ` : '') + `km ${fmt(dd.v,1)}`;
+    // tirage au moins assez large pour la légende ; sinon légende et infos sur deux lignes
+    const pad = 10, fw = Math.max(iw + 2*pad, 400);
+    ctx.font = FONT(500, 17); const wi = ctx.measureText(info).width;
+    ctx.font = FONT(600, 20);
+    const oneLine = ctx.measureText(cap0).width + wi + 24 <= fw - 2*pad - 4;
+    const capH = oneLine ? 40 : 64, fh = ih + pad + capH;
+    let txt = cap0;
+    const maxCap = fw - 2*pad - 4;
+    if (ctx.measureText(txt).width > maxCap){
+      while (ctx.measureText(txt + '…').width > maxCap && txt.length > 4) txt = txt.slice(0, -1);
+      txt += '…';
+    }
     const s = 0.94 + 0.06*easeOutCubic(a);
-    const x = W - 48 - fw, y = 48;
+    const x = W - 48 - fw, y = 48, ix = (fw - iw)/2;
     ctx.save();
     ctx.globalAlpha = a;
     ctx.translate(x + fw/2, y + fh/2); ctx.scale(s, s); ctx.translate(-fw/2, -fh/2);
     shadow(34, 0.55, 10);
     ctx.fillStyle = '#f7f5f0'; rrect(0, 0, fw, fh, 6); ctx.fill();
     noShadow();
-    ctx.drawImage(src.img, pad, pad, iw, ih);
+    ctx.drawImage(src.img, ix, pad, iw, ih);
     ctx.fillStyle = '#2b2b2b'; ctx.font = FONT(600, 20); ctx.textAlign = 'left';
-    const dt = e.photo.date;
-    const cap = e.photo.caption || (dt ? dt.toLocaleDateString('fr-FR', { day:'numeric', month:'long' }) + ' · ' +
-                                         dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
-                                      : e.photo.name.replace(/\.[^.]+$/, ''));
-    let txt = cap;
-    while (ctx.measureText(txt).width > iw - 120 && txt.length > 4) txt = txt.slice(0, -2);
-    if (txt !== cap) txt = txt.slice(0, -1) + '…';
     ctx.fillText(txt, pad + 2, ih + pad + 27);
-    ctx.fillStyle = '#7a7a7a'; ctx.font = FONT(500, 17); ctx.textAlign = 'right';
-    const dd = U.dist(e.d); ctx.fillText(`km ${fmt(dd.v,1)}`, fw - pad - 2, ih + pad + 27);
+    ctx.fillStyle = '#7a7a7a'; ctx.font = FONT(500, 17);
+    if (oneLine){ ctx.textAlign = 'right'; ctx.fillText(info, fw - pad - 2, ih + pad + 27); }
+    else { ctx.textAlign = 'left'; ctx.fillText(info, pad + 2, ih + pad + 52); }
+    if (vt){
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(ix, pad + ih - 5, iw, 5);
+      ctx.fillStyle = ACCENT(); ctx.fillRect(ix, pad + ih - 5, iw*vt.k, 5);
+    }
     ctx.restore();
   }
   ctx.textAlign = 'left'; ctx.globalAlpha = 1;
 }
 
 /* Image à dessiner pour un média : bitmap de la photo, ou image courante du clip. */
-function mediaSource(p){
+function mediaSource(p, u){
   if (p.kind === 'video'){
     const v = p.el;
     if (!v || v.readyState < 2 || !v.videoWidth){ if (!v && !p.bad) probeVideo(p); return null; }
-    return { img:v, w:v.videoWidth, h:v.videoHeight, video:true };
+    if (u == null){ clipEls(p); return { img:v, w:v.videoWidth, h:v.videoHeight, video:true }; }
+    return clipFrame(p, u);
   }
   if (!p.bmp){ photoBitmap(p); return null; }
   return { img:p.bmp, w:p.bmp.width, h:p.bmp.height, video:false };
@@ -1942,12 +2161,144 @@ function photoCaption(e){
                                   dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
                                : e.photo.name.replace(/\.[^.]+$/, ''));
 }
+/* ---------------------------------------------------------------------------
+   Montage d'un clip (onglet ✂ Vidéos) : une liste de segments retenus
+   p.segs = [{ a, b, tr }] (secondes dans le fichier ; tr = raccord qui mène au
+   segment), et p.xd la durée des fondus. Sans segment, le clip est joué en
+   entier. Deux lecteurs <video> sur le même fichier se relaient d'un segment
+   à l'autre : pendant que l'un joue, l'autre attend déjà calé sur le début
+   du segment suivant, ce qui permet coupes franches sans à-coup et fondus
+   enchaînés (deux images à la fois). Le rendu passe par un canevas.
+--------------------------------------------------------------------------- */
+const TRANSITIONS = { cut:'Coupe franche', fade:'Fondu enchaîné', slide:'Glissé', black:'Fondu au noir', white:'Fondu au blanc', blur:'Flou' };
+const OVERLAP = { fade:true, slide:true };             // raccords où les deux segments se chevauchent
+const isTrimmed = p => p.kind === 'video' && !!(p.segs && p.segs.length);
+function clipPlan(p){
+  const D = p.duration || 5, raw = isTrimmed(p) ? p.segs : [{ a:0, b:D }];
+  const xd = Number.isFinite(p.xd) ? p.xd : 0.8;
+  const sig = JSON.stringify(raw) + '|' + D + '|' + xd;
+  if (p._plan && p._plan.sig === sig) return p._plan;
+  const segs = []; let pos = 0;
+  raw.forEach((r, k) => {
+    const a = clamp(r.a, 0, D), len = Math.max(0.1, Math.min(r.b, D) - a);
+    const tr = k ? (TRANSITIONS[r.tr] ? r.tr : 'fade') : 'cut';
+    const T = k && tr !== 'cut' ? Math.min(xd, segs[k-1].len/2, len/2) : 0;
+    if (OVERLAP[tr]) pos -= T;
+    segs.push({ a, b:a + len, len, pos, tr, T });
+    pos += len;
+  });
+  return p._plan = { sig, segs, L:Math.max(0.1, pos) };
+}
+const clipLen = p => clipPlan(p).L;
+/* Ce qu'il faut montrer à l'instant u du montage : couches (segment, instant
+   dans le fichier, opacité, décalage) et effet de raccord (voile, flou). */
+function clipLayers(p, u){
+  const { segs, L } = clipPlan(p);
+  u = clamp(u, 0, L - 1e-4);
+  const layers = []; let over = null, blur = 0;
+  for (let k=0; k<segs.length; k++){
+    const s = segs[k], n = segs[k+1];
+    if (u < s.pos || u >= s.pos + s.len) continue;
+    const lt = u - s.pos; let a = 1, dx = 0;
+    if (k && s.T){                                          // entrée
+      const x = lt / (OVERLAP[s.tr] ? s.T : s.T/2);
+      if (x < 1){
+        const q = easeInOut(clamp(x, 0, 1));
+        if (s.tr === 'fade') a = q;
+        else if (s.tr === 'slide') dx = 1 - q;
+        else if (s.tr === 'blur') blur = Math.max(blur, 1 - q);
+        else over = { c: s.tr === 'white' ? '#fff' : '#000', a: 1 - q };
+      }
+    }
+    if (n && n.T){                                          // sortie
+      if (OVERLAP[n.tr]){
+        if (n.tr === 'slide' && u >= n.pos) dx = -easeInOut(clamp((u - n.pos)/n.T, 0, 1));
+      } else {
+        const x = (s.pos + s.len - u) / (n.T/2);
+        if (x < 1){
+          const q = easeInOut(clamp(x, 0, 1));
+          if (n.tr === 'blur') blur = Math.max(blur, 1 - q);
+          else over = { c: n.tr === 'white' ? '#fff' : '#000', a: 1 - q };
+        }
+      }
+    }
+    layers.push({ k, t: s.a + clamp(lt, 0, s.len - 0.04), a, dx });
+  }
+  return { layers, over, blur };
+}
+function clipEls(p){
+  if (clipPlan(p).segs.length > 1 && p.el && !p.el2 && !p.bad){
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.onseeked = () => { if (!playing && !exporting) refreshPreviewSoon(); };
+    v.src = p.url;
+    p.el2 = v;
+  }
+  return [p.el, p.el2];
+}
+/* Cale les lecteurs d'un clip sur l'instant u du montage.
+   mode : 'exact' (export, attend les images), 'play' (lecture), 'still'. */
+function driveClip(p, u, mode, waits){
+  const plan = clipPlan(p), els = clipEls(p);
+  const uu = clamp(u, 0, plan.L - 1e-4);
+  const want = [null, null], active = [false, false];
+  for (const l of clipLayers(p, uu).layers){ want[l.k % 2] = l.t; active[l.k % 2] = true; }
+  for (let i=0; i<2; i++) if (want[i] == null){        // l'autre lecteur attend le segment suivant
+    const s = plan.segs.find((s, k) => k % 2 === i && s.pos > uu);
+    if (s) want[i] = s.a;
+  }
+  for (let i=0; i<2; i++){
+    const v = els[i]; if (!v) continue;
+    const t = want[i];
+    if (t == null){ if (!v.paused) v.pause(); continue; }
+    if (mode === 'exact'){
+      if (!v.paused) v.pause();
+      if (v.readyState < 1) waits.push(new Promise(r => { v.addEventListener('loadedmetadata', r, { once:true }); setTimeout(r, 4000); }).then(() => seekVideo(v, t)));
+      else if (Math.abs(v.currentTime - t) > 0.001) waits.push(seekVideo(v, t));
+    } else if (mode === 'play' && active[i] && u >= 0 && u < plan.L){
+      if (Math.abs(v.currentTime - t) > 0.3) v.currentTime = t;
+      if (v.paused) v.play().catch(() => {});
+    } else {
+      if (!v.paused) v.pause();
+      if (Math.abs(v.currentTime - t) > 0.04) v.currentTime = t;
+    }
+  }
+}
+function pauseClip(p){ for (const v of [p.el, p.el2]) if (v && !v.paused) v.pause(); }
+/* Image du montage à l'instant u, composée dans un canevas propre au clip. */
+function clipFrame(p, u){
+  const plan = clipPlan(p), v0 = p.el;
+  const w = v0.videoWidth, h = v0.videoHeight;
+  if (plan.segs.length === 1) return { img:v0, w, h, video:true };
+  const k = Math.min(1, 1920 / Math.max(w, h)), cw = Math.round(w*k), ch = Math.round(h*k);
+  const c = p.comp || (p.comp = document.createElement('canvas'));
+  if (c.width !== cw || c.height !== ch){ c.width = cw; c.height = ch; }
+  const g = c.getContext('2d'), els = clipEls(p), { layers, over, blur } = clipLayers(p, u);
+  g.globalAlpha = 1; g.filter = 'none'; g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
+  if (blur > 0.01) g.filter = `blur(${(blur*28*k*w/1280).toFixed(1)}px)`;
+  for (const l of layers){
+    let v = els[l.k % 2];
+    if (!v || v.readyState < 2) v = v0;
+    g.globalAlpha = l.a;
+    const s = blur > 0.01 ? 1 + 0.08*blur : 1;           // léger agrandissement : pas de bord flou
+    g.drawImage(v, l.dx*cw - (s-1)*cw/2, -(s-1)*ch/2, cw*s, ch*s);
+  }
+  g.filter = 'none';
+  if (over && over.a > 0.001){ g.globalAlpha = over.a; g.fillStyle = over.c; g.fillRect(0, 0, cw, ch); }
+  g.globalAlpha = 1;
+  return { img:c, w:cw, h:ch, video:true };
+}
+/* Position de lecture d'un clip : « 0:04 / 0:12 » et fraction lue. */
+function videoClock(e, tt){
+  const tot = e.t1 - e.t0, cur = clamp(tt - e.t0, 0, tot);
+  return { txt:`${mmss(cur + 1e-6)} / ${mmss(Math.round(tot))}`, k: tot > 0 ? cur/tot : 0 };
+}
 function drawPhotoFeature(f){
   const tt = f.t - TL.intro, F = FEATURE_FADE, fadeOut = 1 - f.endA;
   for (let i=0; i<photoPlan.length; i++){
     const e = photoPlan[i];
     if (tt < e.t0 - F || tt > e.t1 + F) continue;
-    const src = mediaSource(e.photo);
+    const src = mediaSource(e.photo, tt - e.t0);
     if (!src) continue;
     const prev = photoPlan[i-1], next = photoPlan[i+1];
     const chainIn  = prev && Math.abs(prev.t1 - e.t0) < 0.05;
@@ -1961,9 +2312,9 @@ function drawPhotoFeature(f){
     a *= fadeOut;
     if (a < 0.01) continue;
 
-    const k = Math.min(1500/src.w, 860/src.h);
+    const k = Math.min(1500/src.w, 800/src.h);
     const iw = src.w*k, ih = src.h*k;
-    const cx = W/2, cy = H/2 - 10;
+    const cx = W/2, cy = H/2 - 50;                        // place pour la légende sous l'image
     const q = map.project([e.photo.lon, e.photo.lat]);
     const sx = isFinite(q.x) ? clamp(q.x, 0, W) : cx, sy = isFinite(q.y) ? clamp(q.y, 0, H) : cy;
     const s = lerp(0.05, 1, g), x = lerp(sx, cx, g), y = lerp(sy, cy, g);
@@ -1986,21 +2337,46 @@ function drawPhotoFeature(f){
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5/s; rrect(-iw/2, -ih/2, iw, ih, 16); ctx.stroke();
     ctx.restore();
 
-    // légende incrustée en bas de la photo, sur un dégradé, une fois la photo en place
+    // légende SOUS l'image, une fois la photo en place : jamais par-dessus,
+    // quel que soit le format (une photo en portrait est étroite)
     const la = a * clamp((g - 0.75)/0.25, 0, 1);
     if (la > 0.01){
-      const bx = cx - iw/2, by = cy + ih/2, gh = Math.min(150, ih*0.3);
+      const bx = cx - iw/2, by = cy + ih/2;
       ctx.save(); ctx.globalAlpha = la;
-      rrect(bx, by - gh, iw, gh, 16); ctx.clip();
-      const gr = ctx.createLinearGradient(0, by - gh, 0, by);
-      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.72)');
-      ctx.fillStyle = gr; ctx.fillRect(bx, by - gh, iw, gh);
-      shadow(10, 0.8, 1);
-      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = FONT(600, 30);
-      ctx.fillText(photoCaption(e), bx + 30, by - 28);
-      const dd = U.dist(e.d);
-      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = FONT(500, 22);
-      ctx.fillText((src.video ? '▶ vidéo  ·  ' : '') + `km ${fmt(dd.v,1)}` + (e.count > 1 ? `  ·  ${e.idx+1} / ${e.count}` : ''), bx + iw - 30, by - 30);
+      const dd = U.dist(e.d), vt = src.video ? videoClock(e, tt) : null;
+      if (vt){                                   // avancement de la lecture, au ras du bas de l'image
+        ctx.save(); rrect(bx, by - ih, iw, ih, 16); ctx.clip();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(bx, by - 6, iw, 6);
+        ctx.fillStyle = ACCENT(); ctx.fillRect(bx, by - 6, iw*vt.k, 6);
+        ctx.restore();
+      }
+      const info = (vt ? `▶ ${vt.txt}  ·  ` : '') + `km ${fmt(dd.v,1)}` + (e.count > 1 ? `  ·  ${e.idx+1} / ${e.count}` : '');
+      ctx.font = FONT(500, 22); const wi = ctx.measureText(info).width;
+      ctx.font = FONT(600, 30);
+      let cap = photoCaption(e);
+      const oneLine = iw >= 900 && ctx.measureText(cap).width + wi + 90 <= iw;
+      const maxCap = oneLine ? iw : W - 240;
+      if (ctx.measureText(cap).width > maxCap){
+        while (ctx.measureText(cap + '…').width > maxCap && cap.length > 4) cap = cap.slice(0, -1);
+        cap += '…';
+      }
+      // plaque sombre sous la légende : lisible même par-dessus les chiffres du bas
+      const tw = Math.max(ctx.measureText(cap).width, wi);
+      const pw = oneLine ? iw : tw + 64, ph = oneLine ? 62 : 96;
+      shadow(24, 0.6, 4); ctx.fillStyle = 'rgba(10,12,16,0.86)';
+      rrect(cx - pw/2, by + 10, pw, ph, 14); ctx.fill(); noShadow();
+      ctx.font = FONT(600, 30);
+      shadow(6, 0.7, 1);
+      ctx.fillStyle = '#fff';
+      if (oneLine){                              // image large : légende à gauche, infos à droite
+        ctx.textAlign = 'left'; ctx.fillText(cap, bx + 26, by + 52);
+        ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.font = FONT(500, 22);
+        ctx.fillText(info, bx + iw - 26, by + 51);
+      } else {                                   // image étroite : deux lignes centrées
+        ctx.textAlign = 'center'; ctx.fillText(cap, cx, by + 51);
+        ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.font = FONT(500, 22);
+        ctx.fillText(info, cx, by + 87);
+      }
       noShadow(); ctx.restore();
     }
   }
@@ -2115,16 +2491,92 @@ function setPlaying(v){
   playing=v; $('#play').textContent = v ? '❚❚' : '▶';
   if (v){
     if (curT >= TL.total-0.01) curT = 0;
+    laReset(curT);
     lastTs = performance.now();
     rafId = requestAnimationFrame(tick);
-  } else { if (rafId){ cancelAnimationFrame(rafId); rafId=null; } pauseAllVideos(); }
+  } else {
+    if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    pauseAllVideos(); setBuffering(false);
+    if (track && !exporting) renderPreview();   // la carte a pu rester sur une vue d'anticipation
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Préchargement pendant la lecture.
+   Comme pour l'export, on parcourt la trajectoire de la caméra (4 vues par
+   seconde d'animation), mais en tâche de fond, quelques secondes devant la
+   tête de lecture : entre deux images affichées, la carte est brièvement
+   placée sur une vue future (invisible : l'écran montre le canevas composé),
+   MapLibre y calcule les tuiles voulues et on les télécharge dans le magasin.
+   Si le réseau ne suit pas, la lecture attend, comme un lecteur vidéo qui
+   met en mémoire tampon, plutôt que d'afficher une carte floue ou vide.
+--------------------------------------------------------------------------- */
+const LA = { K:4, base:0, i:0, frames:[], seen:new Set(), last:0, stalled:false, since:0 };
+function laReset(t){
+  LA.base = LA.i = Math.max(0, Math.floor((t || 0)*LA.K));
+  LA.frames = []; LA.seen = new Set(); LA.stalled = false;
+}
+/* instant jusqu'auquel toutes les tuiles attendues sont arrivées */
+function laHorizon(){
+  for (let k=0; k<LA.frames.length; k++) if (LA.frames[k].pending > 0) return (LA.base + k)/LA.K;
+  return LA.i/LA.K;
+}
+function laStep(){
+  const t = LA.i/LA.K;
+  if (t > TL.total + 1/LA.K) return false;
+  const f = frameAt(Math.min(TL.total, t));
+  applyCam(f.cam); map.redraw();
+  const fr = { pending:0 }, done = () => { fr.pending--; };
+  LA.frames.push(fr);
+  for (const u of wantedTileUrls()){
+    const key = u.replace(/^cache:\/\//, 'https://');
+    if (LA.seen.has(key)) continue;
+    LA.seen.add(key);
+    if (tileStore.has(key)) continue;
+    fr.pending++;
+    fetchTile(key).then(done, done);
+  }
+  // les photos et vidéos à venir sont décodées d'avance, elles aussi
+  for (const e of photoPlan){
+    const te = TL.intro + e.t0 - 1;
+    if (te >= t && te < t + 1/LA.K) mediaSource(e.photo);
+  }
+  LA.i++;
+  // on oublie les vues déjà dépassées
+  while (LA.frames.length > 1 && LA.frames[0].pending <= 0 && (LA.base + 1)/LA.K < curT - 1){ LA.frames.shift(); LA.base++; }
+  return true;
+}
+function setBuffering(on){
+  const b = $('#buffering'); if (b) b.style.display = on ? 'block' : 'none';
+}
+/* Anticipation d'une image : renvoie vrai si la lecture doit attendre. */
+function lookahead(ts){
+  if (!styleReady || !track) return false;
+  const ahead = LA.i/LA.K - curT;
+  // loin derrière (réglage modifié, saut) : on repart de la tête de lecture
+  if (ahead < -0.5) { laReset(curT); }
+  if (LA.stalled){
+    for (let n=0; n<3 && tileQueue.length < 250 && laStep(); n++);
+  } else if (tileQueue.length < 200 && (ahead < 6 || (ahead < 20 && ts - LA.last > 120))){
+    if (laStep()) LA.last = ts;
+  }
+  const hz = laHorizon(), end = TL.total;
+  if (!LA.stalled && hz < Math.min(end, curT + 0.3)){
+    LA.stalled = true; LA.since = ts; pauseAllVideos(); setBuffering(true);
+  } else if (LA.stalled && (hz >= Math.min(end, curT + 2.5) || ts - LA.since > 10000)){
+    LA.stalled = false; setBuffering(false);
+    if (ts - LA.since > 10000) laReset(curT + 2.5);  // réseau bloqué : on n'attend pas indéfiniment
+  }
+  return LA.stalled;
 }
 function tick(ts){
   if (!playing) return;
-  curT = Math.min(TL.total, curT + (ts-lastTs)/1000);
+  if (!lookahead(ts)){
+    curT = Math.min(TL.total, curT + Math.min(0.1, (ts-lastTs)/1000));
+    renderPreview();
+    if (curT >= TL.total) { setPlaying(false); return; }
+  }
   lastTs = ts;
-  renderPreview();
-  if (curT >= TL.total) { setPlaying(false); return; }
   rafId = requestAnimationFrame(tick);
 }
 
@@ -2151,6 +2603,7 @@ function snapToTrack(lon, lat, tk=track){
 --------------------------------------------------------------------------- */
 let tracks = [], activeId = null, nextTrackId = 1, projectBase = null;
 const activeEntry = () => tracks.find(t => t.id === activeId) || null;
+const curRoads = () => { const e = activeEntry(); return e ? (e.roads || (e.roads = [])) : []; };
 
 function defaultSubtitle(tk, withGain){
   const d0 = tk.timed ? new Date(tk.t0) : null, dd = U.dist(tk.total);
@@ -2175,6 +2628,10 @@ function buildEntry(text, filename, saved){
       const own = Number.isFinite(w.lat) && Number.isFinite(w.lon);
       return { name:w.name || 'Point', d, lon: own ? w.lon : s.lon, lat: own ? w.lat : s.lat, kind:w.kind || null, color:cleanColor(w.color) };
     }).sort((a,b)=>a.d-b.d);
+    e.roads = (Array.isArray(saved.roads) ? saved.roads : []).map(r => {
+      const d = clamp(+r.d || 0, 0, tk.total), s = stateAt(tk, d);
+      return { d, name:String(r.name ?? ''), lat:Number.isFinite(r.lat) ? r.lat : s.lat, lon:Number.isFinite(r.lon) ? r.lon : s.lon };
+    }).sort((a,b)=>a.d-b.d);
     e.savedMedia  = Array.isArray(saved.media) ? saved.media : [];
     e.mediaFolder = saved.mediaFolder || '';
     e.title     = saved.title ?? (g.name || '');
@@ -2188,6 +2645,7 @@ function buildEntry(text, filename, saved){
       const s = snapToTrack(w.lon, w.lat, tk);
       return { name:w.name || 'Point', d:s.d, lon: s.far?w.lon:s.lon, lat: s.far?w.lat:s.lat, kind:null, color:null };
     }).sort((a,b)=>a.d-b.d);
+    e.roads     = [];
     e.title     = (g.name || e.gpxName.replace(/\.gpx$/i,'')).trim();
     e.subtitle  = defaultSubtitle(tk);
     e.endSubtitle = '';
@@ -2231,13 +2689,14 @@ function activate(id){
   syncLabels(); rebuildMotion();
   lastDoneIdx=-1; invalidateOverview(); curT=0;
   mini = null; scheduleMinimap();
-  pushRoute(); renderWpList(); showTrackInfo(); renderTrackList();
+  pushRoute(); renderWpList(); renderRoadList(); showTrackInfo(); renderTrackList();
   updatePhotoInfo(); renderPhotoStrip(); makeThumbs();
   if (inMap) setEditing(true);
+  if (tab === 'clips') renderClipEditor();
   renderPreview(); refreshPreviewSoon();
 }
 function clearActive(){
-  if (tab === 'map') setTab('video'); else if (editing) setEditing(false);
+  if (tab !== 'video') setTab('video'); else if (editing) setEditing(false);
   setPlaying(false);
   pauseAllVideos();
   activeId = null; track = null; waypoints = []; photos = []; warp = null; photoPlan = []; photoLinkCache = new Map();
@@ -2245,7 +2704,7 @@ function clearActive(){
   $('#title').value = ''; $('#subtitle').value = ''; $('#endSubtitle').value = '';
   pushRoute();
   if (map.getSource('done')) map.getSource('done').setData(EMPTY);
-  renderWpList(); renderTrackList(); updateClock();
+  renderWpList(); renderRoadList(); renderTrackList(); updateClock();
   $('#trackInfo').textContent = 'Aucune trace chargée.';
   renderPreview();
 }
@@ -2404,7 +2863,8 @@ function applySettings(o){
 function mediaMetaForSave(t){
   const loaded = t.media.map(p => ({ key:p.key, name:p.name, kind:p.kind, manual:p.manual,
                                      lat:p.manual ? p.lat : null, lon:p.manual ? p.lon : null, include:p.include ?? null,
-                                     pass:p.passD ?? null }));
+                                     pass:p.passD ?? null,
+                                     segs: p.kind === 'video' ? SEGS_OUT(p) : null, xd: p.kind === 'video' ? (p.xd ?? null) : null }));
   // un fichier rechargé remplace l'ancienne entrée du même nom (même si sa clé a
   // changé : fichier retouché, date modifiée…) — pas de doublon qui s'accumule
   const keys = new Set(loaded.map(m => m.key)), names = new Set(loaded.map(m => m.name));
@@ -2422,6 +2882,7 @@ function buildProjectData(){
       title:t.title, subtitle:t.subtitle, endSubtitle:t.endSubtitle || '', dur:t.dur, startName:t.startName, endName:t.endName,
       waypoints: t.waypoints.map(w=>({ name:w.name, d:Math.round(w.d*100)/100, kind:w.kind||null, color:w.color||null,
                                        lat:Math.round(w.lat*1e7)/1e7, lon:Math.round(w.lon*1e7)/1e7 })),
+      roads: (t.roads || []).map(r=>({ name:r.name, d:Math.round(r.d*100)/100, lat:Math.round(r.lat*1e7)/1e7, lon:Math.round(r.lon*1e7)/1e7 })),
       mediaFolder: t.mediaFolder || '',
       // les médias ne sont pas embarqués : seulement ce qui ne se retrouve pas dans leurs fichiers
       media: mediaMetaForSave(t)
@@ -2478,6 +2939,178 @@ function showTrackInfo(){
     `Fichier <b>${e.gpxName.replace(/[<>&]/g,'')}</b>`
   ];
   $('#trackInfo').innerHTML = rows.join('<br>');
+}
+
+/* ======================================================================== */
+/*  ROUTES                                                                  */
+/* ======================================================================== */
+function roadTime(d){ return TL.intro + progressForDistance(d)*TL.travel; }
+function renderRoadList(){
+  const ul = $('#roadList'); if (!ul) return;
+  ul.innerHTML = '';
+  const rs = curRoads(), cur = track ? roadIndexAt(frameAt(curT).d) : -1;
+  rs.forEach((r, i) => {
+    const li = document.createElement('li');
+    if (i === cur) li.className = 'cur';
+    const go = document.createElement('button');
+    go.className = 'go'; go.textContent = '▸'; go.title = 'Aller au début de cette route';
+    go.onclick = () => { setPlaying(false); curT = Math.min(TL.total, roadTime(r.d) + 0.7); renderPreview(); renderRoadList(); };
+    const name = document.createElement('input');
+    name.type = 'text'; name.value = r.name; name.placeholder = '(rien d’affiché)';
+    name.oninput = () => { r.name = name.value; if (!exporting) renderPreview(); };
+    const km = document.createElement('input');
+    km.type = 'text'; km.className = 'km'; km.value = fmt(U.dist(r.d).v, 2);
+    km.onchange = () => {
+      const v = parseFloat(km.value.replace(',', '.'));
+      if (Number.isFinite(v)){
+        r.d = clamp(U.imperial ? v*1609.344 : v*1000, 0, track.total);
+        const s = stateAt(track, r.d); r.lat = s.lat; r.lon = s.lon;
+        rs.sort((a, b) => a.d - b.d); renderRoadList(); renderPreview();
+      } else km.value = fmt(U.dist(r.d).v, 2);
+    };
+    const unit = document.createElement('span');
+    unit.textContent = U.dist(0).u; unit.style.cssText = 'color:#8b97ad;font-size:11px';
+    const del = document.createElement('button');
+    del.className = 'del'; del.textContent = '×'; del.title = 'Supprimer';
+    del.onclick = () => { rs.splice(i, 1); renderRoadList(); renderPreview(); };
+    li.append(go, name, km, unit, del); ul.appendChild(li);
+  });
+  if (!rs.length) ul.innerHTML = '<li style="border:none;background:none;color:#8b97ad;font-size:11.5px;padding:2px 0">Aucune route saisie.</li>';
+}
+function addRoadHere(){
+  if (!track){ toast('Chargez d’abord une trace GPX.', true); return; }
+  const rs = curRoads(), d = frameAt(curT).d;
+  let r = rs.find(x => Math.abs(x.d - d) < 1);
+  if (!r){
+    const s = stateAt(track, d);
+    r = { d: d < 1 ? 0 : d, name:'', lat:s.lat, lon:s.lon };
+    rs.push(r); rs.sort((a, b) => a.d - b.d);
+  }
+  renderRoadList();
+  const li = $('#roadList').children[rs.indexOf(r)];
+  if (li){ const inp = li.querySelector('input[type=text]'); inp.focus(); inp.select(); }
+}
+
+/* Détection d'après OpenStreetMap (Overpass) : les voies proches de la trace
+   sont téléchargées par morceaux, puis chaque point de la trace (tous les
+   40 m) est rattaché à la voie la plus proche orientée dans le même sens. Les
+   changements trop courts (carrefours, ponts, bretelles) sont gommés. Le
+   résultat reste une proposition : la liste est ensuite modifiable. */
+const OVERPASS = 'https://overpass-api.de/api/interpreter';
+async function overpassWays(pts, onProgress){
+  const ways = new Map(), CH = 220;
+  const skip = 'footway|path|cycleway|steps|pedestrian|bridleway|corridor|elevator|platform|proposed|construction|abandoned|raceway|bus_stop';
+  for (let i=0; i<pts.length; i += CH - 1){
+    const chunk = pts.slice(i, i + CH);
+    const q = `[out:json][timeout:120];way(around:35,${chunk.map(p => p[0].toFixed(5)+','+p[1].toFixed(5)).join(',')})[highway][highway!~"^(${skip})$"];out tags geom;`;
+    let res, tries = 0;
+    for (;;){
+      res = await fetch(OVERPASS, { method:'POST', body:'data=' + encodeURIComponent(q),
+                                    headers:{ 'Content-Type':'application/x-www-form-urlencoded' } });
+      if (res.ok || ++tries > 2 || (res.status !== 429 && res.status < 500)) break;
+      await delay(4000*tries);                          // serveur saturé : on réessaie
+    }
+    if (!res.ok) throw new Error('OpenStreetMap indisponible (HTTP ' + res.status + ')');
+    const js = await res.json();
+    for (const el of js.elements || []) if (el.type === 'way' && el.geometry) ways.set(el.id, el);
+    onProgress && onProgress(Math.min(1, (i + CH)/pts.length));
+    if (i + CH >= pts.length) break;
+  }
+  return [...ways.values()];
+}
+async function detectRoads(){
+  if (!track){ toast('Chargez d’abord une trace GPX.', true); return; }
+  const e = activeEntry(), tk = track;
+  if (e.roads.length && !confirm(`Remplacer les ${e.roads.length} route(s) saisie(s) par la détection OpenStreetMap ?`)) return;
+  const btn = $('#roadDetect'); btn.disabled = true;
+  try {
+    const q = [];
+    for (let d=0; d<=tk.total; d += 150){ const s = stateAt(tk, d); q.push([s.lat, s.lon]); }
+    const last = stateAt(tk, tk.total); q.push([last.lat, last.lon]);
+    const ways = await overpassWays(q, p => { btn.textContent = `🛣 OSM… ${Math.round(p*100)} %`; });
+    if (!ways.length){ toast('Aucune route trouvée le long de la trace.', true); return; }
+
+    // index spatial des segments, en mètres autour du centre de la trace
+    const lat0 = (tk.bounds[0][1] + tk.bounds[1][1])/2, kx = 111320*Math.cos(lat0*D2R), ky = 110540;
+    const P = (lat, lon) => [lon*kx, lat*ky], CELL = 60, grid = new Map();
+    const cellKey = (x, y) => Math.floor(x/CELL) + ',' + Math.floor(y/CELL);
+    for (const w of ways){
+      const t = w.tags || {}, ref = (t.ref || '').split(';')[0].trim(), name = (t.name || '').trim();
+      if (!ref && !name) { w.key = ''; } else w.key = ref || name;
+      w.ref = ref; w.nm = name;
+      const g = w.geometry.map(p => P(p.lat, p.lon));
+      for (let i=1; i<g.length; i++){
+        const [x1,y1] = g[i-1], [x2,y2] = g[i], seg = { x1, y1, x2, y2, w };
+        const c0x = Math.floor(Math.min(x1,x2)/CELL), c1x = Math.floor(Math.max(x1,x2)/CELL);
+        const c0y = Math.floor(Math.min(y1,y2)/CELL), c1y = Math.floor(Math.max(y1,y2)/CELL);
+        if ((c1x-c0x+1)*(c1y-c0y+1) > 400) continue;
+        for (let cx=c0x; cx<=c1x; cx++) for (let cy=c0y; cy<=c1y; cy++){
+          const k = cx + ',' + cy; let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(seg);
+        }
+      }
+    }
+    // voie de chaque point de la trace
+    const STEP = 40, samples = [];
+    for (let d=0; d<=tk.total; d += STEP){
+      const s = stateAt(tk, d), [x, y] = P(s.lat, s.lon), h = s.heading*D2R;
+      const hx = Math.sin(h), hy = Math.cos(h);
+      let best = null, bs = Infinity;
+      const cx = Math.floor(x/CELL), cy = Math.floor(y/CELL);
+      for (let i=-1; i<=1; i++) for (let j=-1; j<=1; j++){
+        for (const sg of grid.get((cx+i)+','+(cy+j)) || []){
+          const dx = sg.x2-sg.x1, dy = sg.y2-sg.y1, L2 = dx*dx + dy*dy || 1;
+          const u = clamp(((x-sg.x1)*dx + (y-sg.y1)*dy)/L2, 0, 1);
+          const dist = Math.hypot(sg.x1 + u*dx - x, sg.y1 + u*dy - y);
+          if (dist > 35) continue;
+          const cos = Math.abs((dx*hx + dy*hy)/Math.sqrt(L2));      // alignement avec le sens de marche
+          const score = dist + 30*(1 - cos) + (sg.w.key ? 0 : 8);
+          if (score < bs){ bs = score; best = sg.w; }
+        }
+      }
+      samples.push({ d, w:best });
+    }
+    // regroupement en tronçons, puis suppression des tronçons trop courts
+    let runs = [];
+    for (const sm of samples){
+      const key = sm.w ? sm.w.key : '', r = runs[runs.length-1];
+      if (r && r.key === key){ r.n++; r.ws.push(sm.w); }
+      else runs.push({ key, d0:sm.d, n:1, ws:[sm.w] });
+    }
+    const MIN = Math.max(400, tk.total*0.004)/STEP;
+    for (let changed = true; changed && runs.length > 1; ){
+      changed = false;
+      let k = -1, m = Infinity;
+      runs.forEach((r, i) => { if (r.n < MIN && r.n < m){ m = r.n; k = i; } });
+      if (k < 0) break;
+      const r = runs[k], into = k === 0 ? runs[1] : k === runs.length-1 ? runs[k-1]
+                              : (runs[k-1].n >= runs[k+1].n ? runs[k-1] : runs[k+1]);
+      into.n += r.n; into.ws.push(...r.ws); if (into === runs[k+1]) into.d0 = r.d0;
+      runs.splice(k, 1); changed = true;
+      // deux tronçons voisins de même route se rejoignent
+      for (let i=1; i<runs.length; i++) if (runs[i].key === runs[i-1].key){
+        runs[i-1].n += runs[i].n; runs[i-1].ws.push(...runs[i].ws); runs.splice(i, 1); i--;
+      }
+    }
+    const label = r => {
+      if (!r.key) return '';
+      const ws = r.ws.filter(w => w && w.key === r.key), cnt = new Map();
+      for (const w of ws) if (w.nm) cnt.set(w.nm, (cnt.get(w.nm) || 0) + 1);
+      const nm = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0];
+      const ref = ws.find(w => w.ref)?.ref;
+      return ref ? ref + (nm ? ' · ' + nm[0] : '') : (nm ? nm[0] : r.key);
+    };
+    e.roads = runs.map((r, i) => {
+      const d = i ? r.d0 : 0, s = stateAt(tk, d);
+      return { d, name:label(r), lat:s.lat, lon:s.lon };
+    }).filter((r, i, a) => i === 0 || r.name !== a[i-1].name);
+    renderRoadList(); renderPreview();
+    const named = e.roads.filter(r => r.name).length;
+    toast(`${named} route(s) détectée(s) — vérifiez et corrigez la liste si besoin.`);
+  } catch(err){
+    console.error(err); toast('Détection impossible : ' + (err.message || err), true);
+  } finally {
+    btn.disabled = false; btn.textContent = '🛣 Détecter (OSM)';
+  }
 }
 
 /* ======================================================================== */
@@ -2615,13 +3248,17 @@ map.on('click', e=>{
 let tab = 'video';
 function setTab(t){
   if (t === tab || exporting) return;
-  if (t === 'map' && !track){ toast('Chargez d’abord une trace GPX.', true); return; }
+  if (t !== 'video' && !track){ toast('Chargez d’abord une trace GPX.', true); return; }
+  if (tab === 'clips') clipLeave();
   tab = t;
   document.body.classList.toggle('tab-map', t === 'map');
+  document.body.classList.toggle('tab-clips', t === 'clips');
   $$('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   setPlaying(false);
   setEditing(t === 'map');
   if (t === 'map') renderPhotoStrip();
+  if (t === 'clips') renderClipEditor();
+  if (t === 'video'){ layout(); renderPreview(); refreshPreviewSoon(); }
 }
 
 /* ======================================================================== */
@@ -2638,7 +3275,9 @@ function readPhotoMemo(){ try { return JSON.parse(localStorage.getItem(PHOTO_MEM
 function writePhotoMemo(entries){
   const m = readPhotoMemo();
   for (const e of entries) m[e.key] = { manual:!!e.manual, lat:e.manual ? e.lat : null, lon:e.manual ? e.lon : null, include:e.include ?? null,
-                                         pass: e.passD ?? e.pass ?? null };
+                                         pass: e.passD ?? e.pass ?? null,
+                                         segs: e.kind === 'video' ? SEGS_OUT(e) : (e.segs ?? null), xd: e.xd ?? null,
+                                         tin: e.tin ?? null, tout: e.tout ?? null };   // découpe d'un ancien projet
   try { localStorage.setItem(PHOTO_MEMO, JSON.stringify(m)); } catch(e){}
 }
 function applyPhotoMeta(p, m){
@@ -2646,7 +3285,11 @@ function applyPhotoMeta(p, m){
   if (m.manual && Number.isFinite(m.lat) && Number.isFinite(m.lon)){ p.lat = m.lat; p.lon = m.lon; p.manual = true; }
   if (typeof m.include === 'boolean') p.include = m.include;
   if (Number.isFinite(m.pass)) p.passD = m.pass;
+  if (Array.isArray(m.segs) && m.segs.length) p.segs = m.segs.map(([a, b, tr]) => ({ a:+a || 0, b:+b || 1e9, tr:tr || 'fade' }));
+  else if (Number.isFinite(m.tin) || Number.isFinite(m.tout)) p.segs = [{ a:m.tin ?? 0, b:m.tout ?? 1e9 }];   // ancienne découpe début/fin
+  if (Number.isFinite(m.xd)) p.xd = m.xd;
 }
+function SEGS_OUT(p){ return (p.segs && p.segs.length ? p.segs.map(g => Array.isArray(g) ? g : [Math.round(g.a*1000)/1000, Math.round(Math.min(g.b, p.duration || g.b)*1000)/1000, g.tr || null]) : null); }
 
 /* Rattachement à la trace active : point le plus proche, et écart latéral. */
 let photoLinkCache = new Map();
@@ -2866,13 +3509,13 @@ function updateThumbImg(p){
   const img = th && th.querySelector('img');
   if (img && p.thumb){ img.src = p.thumb; img.style.opacity = ''; th.classList.remove('wait'); }
 }
-function pauseAllVideos(){ for (const t of tracks) for (const p of t.media) if (p.el && !p.el.paused) p.el.pause(); }
+function pauseAllVideos(){ for (const t of tracks) for (const p of t.media) pauseClip(p); }
 function releaseMedia(list){
   for (const p of list || []){
     if (p.bmp) p.bmp.close();
     // on débranche les écouteurs AVANT de vider la source : vider la source émet
     // une erreur qui, sinon, marquait à tort la vidéo « illisible »
-    if (p.el){ p.el.onerror = p.el.onseeked = p.el.onloadedmetadata = null; p.el.pause(); p.el.removeAttribute('src'); p.el.load(); }
+    for (const v of [p.el, p.el2]) if (v){ v.onerror = v.onseeked = v.onloadedmetadata = null; v.pause(); v.removeAttribute('src'); v.load(); }
     if (p.thumb && p.thumb.startsWith('blob:')) URL.revokeObjectURL(p.thumb);
     if (p.url) URL.revokeObjectURL(p.url);
   }
@@ -2975,6 +3618,7 @@ function updateProjectInfo(){
     el.textContent = `📁 ${projectDir.name}` + (projectFilePath ? ` › ${projectFilePath}` : ' · pas encore enregistré');
     el.title = el.textContent;
   } else el.textContent = tracks.length ? 'Projet non enregistré' : 'Aucun projet ouvert';
+  updateReopen();
 }
 
 /* Remplace la trace d'une fiche par une nouvelle version du GPX, sans perdre le
@@ -2996,6 +3640,11 @@ function refreshTrackFromGpx(e, text){
     }
   }
   e.waypoints.sort((a, b) => a.d - b.d);
+  for (const r of e.roads || []){                         // débuts de route replacés d'après leur position
+    if (r.d < 1){ r.d = 0; continue; }
+    const s = snapToTrack(r.lon, r.lat, tk); r.d = s.d;
+  }
+  if (e.roads) e.roads.sort((a, b) => a.d - b.d);
   if (wasDefaultSub) e.subtitle = defaultSubtitle(tk);
   if (+e.dur === defDur) e.dur = defaultDur(tk);
 }
@@ -3075,6 +3724,7 @@ async function openProjectDir(dir){
     projectDir = dir; projectFileHandle = null; projectFilePath = '';
   }
   projectBase = dir.name;
+  rememberProjectDir(dir);
   const sync = projs.length ? await syncGpxFromDir(dir) : { updated:[], added:[], failed:[] };
   const r = await autoLoadMedia();
   const missing = tracks.filter(t => t.expectedMedia && !t.media.length).length;
@@ -3086,12 +3736,42 @@ async function openProjectDir(dir){
         (sync.failed.length ? ` · GPX illisible : ${sync.failed[0]}` : ''), !!(missing || sync.failed.length));
   if (sync.updated.length || sync.added.length) $('#projectInfo').textContent += ' · modifié, pensez à enregistrer';
 }
+/* Dernier dossier de projet : un navigateur ne peut pas viser un chemin
+   (« /Users/…/replay ») de lui-même, mais il garde la poignée du dossier
+   ouvert. Le sélecteur s'ouvre alors dedans, et le bouton ↻ le rouvre en un
+   clic (une simple confirmation d'accès, sans repasser par le sélecteur). */
+const LAST_PROJECT = '__lastProject';
+async function rememberProjectDir(dir){ if (HAS_FSA){ await idb.set(LAST_PROJECT, dir); updateReopen(); } }
+async function updateReopen(){
+  const b = $('#reopenProject'); if (!b || !HAS_FSA) return;
+  const h = await idb.get(LAST_PROJECT);
+  const same = h && projectDir && await h.isSameEntry(projectDir).catch(() => false);
+  b.style.display = h && !same ? 'block' : 'none';
+  if (h) b.textContent = `↻ Rouvrir « ${h.name} »`;
+}
+async function reopenLastProject(){
+  if (exporting) return;
+  const h = await idb.get(LAST_PROJECT);
+  if (!h) return openProjectFlow();
+  try {
+    let perm = await h.queryPermission({ mode:'readwrite' });
+    if (perm !== 'granted') perm = await h.requestPermission({ mode:'readwrite' });
+    if (perm !== 'granted'){ toast('Accès au dossier refusé.', true); return; }
+    await openProjectDir(h);
+  } catch(e){ toast(`« ${h.name} » est introuvable (déplacé ou renommé ?) : utilisez 📂 Ouvrir.`, true); }
+}
 async function openProjectFlow(){
   if (exporting) return;
   if (!HAS_FSA){ $('#projectFile').click(); return; }
+  const last = await idb.get(LAST_PROJECT);
   let dir;
-  try { dir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite' }); }
-  catch(e){ if (e.name !== 'AbortError') toast('Dossier inaccessible : ' + e.message, true); return; }
+  try { dir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite', ...(last ? { startIn:last } : {}) }); }
+  catch(e){
+    if (e.name === 'AbortError') return;
+    // dossier mémorisé disparu : on retente sans point de départ
+    try { dir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite' }); }
+    catch(e2){ if (e2.name !== 'AbortError') toast('Dossier inaccessible : ' + e2.message, true); return; }
+  }
   await openProjectDir(dir);
 }
 
@@ -3111,6 +3791,7 @@ async function saveProjectFlow(){
     try { projectDir = await showDirectoryPicker({ id:'gpxcine-project', mode:'readwrite' }); }
     catch(e){ if (e.name !== 'AbortError') toast('Dossier inaccessible : ' + e.message, true); return; }
     projectBase = projectDir.name; projectFileHandle = null;
+    rememberProjectDir(projectDir);
   }
   let perm = await projectDir.queryPermission({ mode:'readwrite' });
   if (perm !== 'granted') perm = await projectDir.requestPermission({ mode:'readwrite' });
@@ -3431,10 +4112,341 @@ const mediaFilters = {
   geo:      p => p.lat != null,
   unplaced: p => p.lat == null,            // y compris les propositions pas encore validées
 };
+/* ======================================================================== */
+/*  ONGLET VIDÉOS : MONTAGE DES CLIPS                                       */
+/* ======================================================================== */
+/* Les clips de la trace active. Pour chacun, on garde un ou plusieurs
+   segments, reliés par un raccord au choix (coupe, fondus…). L'éditeur a
+   son propre lecteur pour parcourir le fichier (avec le son, que la vidéo
+   exportée n'a pas) ; « ▶ Montage » joue le résultat tel qu'il apparaîtra.
+   Le montage est mémorisé comme les autres réglages d'un média (navigateur
+   + projet) et la chronologie est recalculée à chaque modification. */
+let clipSel = null, clipK = 0, clipRaf = 0, clipMont = null;
+const clipV = () => $('#clipVid');
+const CLIP_MIN = 0.3;
+const TR_ICON = { cut:'│', fade:'◐', slide:'⇆', black:'●', white:'○', blur:'≈' };
+const clipVideos = () => photos.filter(p => p.kind === 'video')
+  .sort((a, b) => ((a.date?.getTime() ?? Infinity) - (b.date?.getTime() ?? Infinity)) || a.name.localeCompare(b.name, 'fr', { numeric:true }));
+const fmtS = t => fmt(t, 1).replace(/\.0$|,0$/, '') + ' s';
+const fmtT = t => { const m = Math.floor(t/60), x = t - m*60; return m + ':' + (x < 10 ? '0' : '') + fmt(x, 1); };
+function clipStatus(p){
+  if (p.bad) return 'illisible';
+  const l = photoLink(p);
+  if (p.lat == null) return 'non placée';
+  if (!photoPlan.some(e => e.photo === p)) return l && l.near ? 'exclue' : 'hors trace';
+  return l ? `km ${fmt(U.dist(l.d).v, 1)}` : '';
+}
+function renderClipList(){
+  const box = $('#clipList'); if (!box) return;
+  const vids = clipVideos();
+  box.innerHTML = '';
+  if (!vids.length){
+    box.innerHTML = `<div class="empty">Aucune vidéo pour « ${escapeHtml(activeEntry()?.title || 'cette trace')} ».<br>Chargez le dossier de médias de la trace dans le panneau Photos et vidéos.</div>`;
+    return;
+  }
+  for (const p of vids){
+    const el = document.createElement('div');
+    el.className = 'ci' + (p === clipSel ? ' on' : '');
+    const n = isTrimmed(p) ? p.segs.length : 0;
+    const len = p.duration ? (n ? `<span class="cut">✂ ${fmtS(clipLen(p))}${n > 1 ? ` · ${n} seg.` : ''}</span> sur ${mmss(p.duration)}` : mmss(p.duration)) : '…';
+    el.innerHTML = (p.thumb ? '<img alt="">' : '<div class="noimg"></div>') +
+      `<div class="t"><b></b><span>${len} · ${clipStatus(p)}</span></div>`;
+    if (p.thumb) el.querySelector('img').src = p.thumb;
+    el.querySelector('b').textContent = p.name;
+    el.title = p.name + (p.date ? ' · ' + p.date.toLocaleString('fr-FR') : '');
+    el.onclick = () => selectClip(p);
+    box.appendChild(el);
+  }
+}
+function escapeHtml(t){ return String(t).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
+function renderClipEditor(){
+  const vids = clipVideos();
+  if (!vids.includes(clipSel)) clipSel = null;
+  renderClipList();
+  if (!clipSel && vids.length) selectClip(vids.find(p => !p.bad) || vids[0]);
+  else if (!clipSel) showClip(null);
+}
+function selectClip(p){
+  if (clipSel !== p) clipK = 0;
+  clipSel = p;
+  renderClipList();
+  showClip(p);
+}
+async function showClip(p){
+  const v = clipV();
+  stopMontage(); v.pause();
+  $('#clipMsg').textContent = '';
+  if (!p || p.bad){
+    v.removeAttribute('src'); v.load(); v.style.display = 'none';
+    $('#clipMsg').textContent = p ? `Vidéo illisible : ${p.badReason || ''}` : 'Aucune vidéo pour cette trace.';
+    clipLayout(); return;
+  }
+  if (!p.duration) await probeVideo(p);
+  if (clipSel !== p) return;
+  p.url = p.url || URL.createObjectURL(p.file);
+  v.style.display = '';
+  const start = () => { const S = effSegs(p); v.currentTime = S[Math.min(clipK, S.length-1)].a; clipUI(); };
+  if (v.dataset.key !== p.key){ v.src = p.url; v.dataset.key = p.key; v.onloadedmetadata = () => { if (clipSel === p) start(); }; }
+  else start();
+  clipStrip(p);
+  clipLayout();
+}
+/* Bande d'images le long de la réglette, calculée une fois par clip. */
+async function clipStrip(p){
+  const tl = $('#clipTL');
+  if (p.strip){ tl.style.backgroundImage = `url(${p.strip})`; return; }
+  tl.style.backgroundImage = '';
+  if (p.stripBusy || !p.duration) return;
+  p.stripBusy = true;
+  try {
+    const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = p.url;
+    await new Promise((r, j) => { v.onloadeddata = r; v.onerror = j; });
+    const N = 16, fh = 90, fw = Math.round(fh * (v.videoWidth || 16) / (v.videoHeight || 9));
+    const c = document.createElement('canvas'); c.width = N*fw; c.height = fh;
+    const g = c.getContext('2d');
+    for (let i=0; i<N; i++){
+      await new Promise(r => { const to = setTimeout(r, 3000); v.onseeked = () => { clearTimeout(to); r(); }; v.currentTime = (i + 0.5)/N * p.duration; });
+      g.drawImage(v, i*fw, 0, fw, fh);
+    }
+    p.strip = await new Promise(r => c.toBlob(b => r(b ? URL.createObjectURL(b) : null), 'image/jpeg', 0.7));
+    v.removeAttribute('src'); v.load();
+    if (clipSel === p && p.strip) tl.style.backgroundImage = `url(${p.strip})`;
+  } catch(e){ /* pas de bande : la réglette reste unie */ }
+  p.stripBusy = false;
+}
+
+/* ---- segments ---- */
+const effSegs = p => isTrimmed(p) ? p.segs.map(g => ({ a:g.a, b:Math.min(g.b, p.duration), tr:g.tr || 'fade' }))
+                                  : [{ a:0, b:p.duration || 0, tr:'cut' }];
+const segAt = (S, t) => S.findIndex(g => t >= g.a - 1e-3 && t < g.b - 1e-3);
+let clipCommitTimer = 0;
+function setSegs(p, S, commit = true){
+  const D = p.duration || 0;
+  S = S.filter(g => g.b - g.a >= CLIP_MIN - 1e-6).sort((x, y) => x.a - y.a);
+  const full = !S.length || (S.length === 1 && S[0].a < 0.02 && S[0].b > D - 0.02);
+  p.segs = full ? null : S.map((g, k) => ({ a:Math.round(g.a*1000)/1000, b:Math.round(g.b*1000)/1000, tr: k ? (g.tr || 'fade') : 'cut' }));
+  clipK = clamp(clipK, 0, effSegs(p).length - 1);
+  clipLayout();
+  if (commit){
+    clearTimeout(clipCommitTimer);
+    clipCommitTimer = setTimeout(() => { writePhotoMemo([p]); refreshPhotos(); renderClipList(); }, 150);
+  }
+}
+function segEdit(fn){
+  const p = clipSel; if (!p || !p.duration) return;
+  stopMontage();
+  const S = effSegs(p), cur = clipV().currentTime || 0;
+  const msg = fn(S, cur, p.duration);
+  if (typeof msg === 'string'){ toast(msg, true); return; }
+  setSegs(p, S);
+}
+const setIn = () => segEdit((S, t) => {
+  let k = segAt(S, t); if (k < 0) k = clipK;
+  S[k].a = clamp(t, k ? S[k-1].b : 0, S[k].b - CLIP_MIN); clipK = k;
+});
+const setOut = () => segEdit((S, t, D) => {
+  let k = segAt(S, t); if (k < 0 || Math.abs(t - S[k].a) < 1e-3) k = S.findIndex((g, i) => g.b <= t + 1e-3 && (!S[i+1] || S[i+1].a > t)); if (k < 0) k = clipK;
+  S[k].b = clamp(t, S[k].a + CLIP_MIN, S[k+1] ? S[k+1].a : D); clipK = k;
+});
+const splitHere = () => segEdit((S, t) => {
+  const k = segAt(S, t);
+  if (k < 0) return 'La position courante n’est dans aucun segment.';
+  if (t - S[k].a < CLIP_MIN || S[k].b - t < CLIP_MIN) return 'Trop près du bord du segment pour le couper.';
+  S.splice(k, 1, { a:S[k].a, b:t, tr:S[k].tr }, { a:t, b:S[k].b, tr:'cut' });
+  clipK = k + 1;
+});
+const addHere = () => segEdit((S, t, D) => {
+  if (segAt(S, t) >= 0) return 'Déjà dans un segment : « ✂ Couper ici » pour le diviser, ou déplacez-vous hors des segments.';
+  const next = S.find(g => g.a > t), b = Math.min(t + 4, next ? next.a : D);
+  if (b - t < CLIP_MIN) return 'Pas assez de place ici pour un nouveau segment.';
+  S.push({ a:t, b, tr:'fade' }); S.sort((x, y) => x.a - y.a);
+  clipK = S.findIndex(g => g.a === t);
+});
+const delSeg = () => segEdit(S => {
+  if (S.length <= 1){ S.length = 0; return; }                 // plus rien : clip entier
+  const k = clamp(clipK, 0, S.length - 1);
+  S.splice(k, 1);
+  if (S[k] && S[k].tr === 'cut') S[k].tr = 'fade';            // il y a maintenant un vrai saut
+  clipK = Math.max(0, k - (S[k] ? 0 : 1));
+});
+function setTransition(k, tr){
+  const p = clipSel; if (!p || !p.segs || !p.segs[k]) return;
+  p.segs[k].tr = tr; setSegs(p, effSegs(p));
+}
+
+/* ---- affichage ---- */
+function clipLayout(){
+  const p = clipSel, D = p && p.duration || 0, on = !!(p && D && !p.bad);
+  $('#clipTL').style.visibility = on ? '' : 'hidden';
+  const box = $('#clipSegs'), list = $('#clipSegList');
+  box.innerHTML = ''; list.innerHTML = '';
+  if (on){
+    const S = effSegs(p), pc = t => (clamp(t / D, 0, 1)*100).toFixed(3) + '%';
+    let html = '', last = 0;
+    S.forEach((g, k) => {
+      if (g.a > last + 1e-3) html += `<div class="dim" style="left:${pc(last)};width:calc(${pc(g.a)} - ${pc(last)})"></div>`;
+      last = g.b;
+      html += `<div class="seg${k === clipK ? ' on' : ''}" data-k="${k}" style="left:${pc(g.a)};width:calc(${pc(g.b)} - ${pc(g.a)})">${S.length > 1 ? `<span>${k+1}</span>` : ''}</div>` +
+              `<div class="h" data-k="${k}" data-side="a" style="left:${pc(g.a)}"></div><div class="h" data-k="${k}" data-side="b" style="left:${pc(g.b)}"></div>`;
+      if (k) html += `<div class="x" style="left:calc((${pc(S[k-1].b)} + ${pc(g.a)})/2)" title="${TRANSITIONS[g.tr]}">${TR_ICON[g.tr]}</div>`;
+    });
+    if (last < D - 1e-3) html += `<div class="dim" style="left:${pc(last)};right:0"></div>`;
+    box.innerHTML = html;
+    // liste des segments et des raccords
+    S.forEach((g, k) => {
+      if (k){
+        const sel = document.createElement('select');
+        sel.title = 'Raccord entre les segments ' + k + ' et ' + (k+1);
+        for (const [key, lab] of Object.entries(TRANSITIONS)) sel.add(new Option(TR_ICON[key] + ' ' + lab, key, false, key === g.tr));
+        sel.onchange = () => setTransition(k, sel.value);
+        list.appendChild(sel);
+      }
+      const chip = document.createElement('div');
+      chip.className = 'sg' + (k === clipK ? ' on' : '');
+      chip.innerHTML = `<b>${k+1}</b> ${fmtT(g.a)} → ${fmtT(g.b)} <span style="color:var(--muted)">(${fmtS(g.b - g.a)})</span>`;
+      chip.title = 'Sélectionner ce segment et s’y placer';
+      chip.onclick = () => { clipK = k; stopMontage(); clipV().pause(); clipSeek(g.a); clipLayout(); };
+      list.appendChild(chip);
+    });
+    if (S.length > 1){
+      const lab = document.createElement('label');
+      lab.title = 'Durée des fondus, glissés et flous entre segments';
+      lab.innerHTML = 'Fondus <input type="text"> s';
+      const inp = lab.querySelector('input');
+      inp.value = fmt(Number.isFinite(p.xd) ? p.xd : 0.8, 1);
+      inp.onchange = () => { const x = parseFloat(inp.value.replace(',', '.')); if (Number.isFinite(x)){ p.xd = clamp(x, 0.1, 3); setSegs(p, effSegs(p)); } else clipLayout(); };
+      list.appendChild(lab);
+    }
+  }
+  clipUI();
+}
+function clipUI(){
+  const p = clipSel, v = clipV(), D = p && p.duration || 0;
+  const on = !!(p && D && !p.bad);
+  for (const id of ['clipPlay','clipBack','clipFwd','clipSetIn','clipSetOut','clipSplit','clipAdd','clipDel','clipReset','clipMontage','clipMute']) $('#'+id).disabled = !on;
+  if (!on){ $('#clipInfo').textContent = ''; return; }
+  const t = clipMont ? clipMont.src : (v.currentTime || 0);
+  $('#clipPH').style.left = (clamp(t / D, 0, 1)*100) + '%';
+  $('#clipPlay').textContent = v.paused ? '▶' : '❚❚';
+  $('#clipMontage').textContent = clipMont ? '■ Arrêter' : '▶ Montage';
+  $('#clipMute').textContent = v.muted ? '🔇' : '🔊';
+  const n = isTrimmed(p) ? p.segs.length : 0, L = clipLen(p);
+  $('#clipInfo').innerHTML = (clipMont ? `Montage <b>${fmtS(clipMont.u)}</b> / ${fmtS(L)}` : `Position <b>${fmtT(t)}</b>`) +
+    (n ? ` · ${n} segment${n > 1 ? 's' : ''} · montage de <b>${fmtS(L)}</b> sur ${fmtS(D)}` : ` · clip entier, <b>${fmtS(D)}</b>`) +
+    ' · le point reste arrêté pendant tout le montage';
+}
+function clipTick(){
+  clipUI();
+  if (!clipV().paused) clipRaf = requestAnimationFrame(clipTick);
+}
+function clipSeek(t){
+  const p = clipSel, v = clipV(); if (!p || !p.duration) return;
+  v.currentTime = clamp(t, 0, p.duration); clipUI();
+}
+
+/* ---- lecture du montage (mêmes lecteurs et même rendu que la vidéo) ---- */
+async function startMontage(){
+  const p = clipSel; if (!p || p.bad) return;
+  clipV().pause();
+  if (!p.el) await probeVideo(p);
+  if (!p.el || clipSel !== p) return;
+  const cv = $('#clipCanvas');
+  cv.width = Math.min(1920, p.el.videoWidth || 1280); cv.height = Math.round(cv.width * (p.el.videoHeight || 720) / (p.el.videoWidth || 1280));
+  $('#clipStage').classList.add('montage');
+  clipMont = { t0: performance.now(), u:0, src:0 };
+  driveClip(p, 0, 'still', []);
+  const loop = () => {
+    if (!clipMont || clipSel !== p) return;
+    const L = clipLen(p), u = (performance.now() - clipMont.t0)/1000;
+    if (u >= L){ stopMontage(); return; }
+    driveClip(p, u, 'play', []);
+    const f = clipFrame(p, u), ls = clipLayers(p, u).layers;
+    clipMont.u = u; clipMont.src = ls.length ? ls[ls.length-1].t : clipMont.src;
+    if (f && p.el.readyState >= 2) cv.getContext('2d').drawImage(f.img, 0, 0, cv.width, cv.height);
+    clipUI();
+    clipMont.raf = requestAnimationFrame(loop);
+  };
+  clipMont.raf = requestAnimationFrame(loop);
+  clipUI();
+}
+function stopMontage(){
+  if (!clipMont) return;
+  cancelAnimationFrame(clipMont.raf);
+  const src = clipMont.src; clipMont = null;
+  if (clipSel) pauseClip(clipSel);
+  $('#clipStage').classList.remove('montage');
+  if (clipSel && clipSel.duration) clipSeek(src);
+  clipUI();
+}
+function clipLeave(){ stopMontage(); const v = clipV(); if (v){ v.pause(); cancelAnimationFrame(clipRaf); } }
+
+(function initClipEditor(){
+  const v = clipV(), tl = $('#clipTL');
+  v.muted = true;
+  v.addEventListener('play', () => { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(clipTick); });
+  v.addEventListener('pause', clipUI);
+  v.addEventListener('seeked', clipUI);
+  v.onclick = () => $('#clipPlay').click();
+  $('#clipPlay').onclick = () => { stopMontage(); if (v.paused) v.play().catch(() => {}); else v.pause(); };
+  $('#clipBack').onclick = () => { stopMontage(); clipSeek(v.currentTime - 1); };
+  $('#clipFwd').onclick  = () => { stopMontage(); clipSeek(v.currentTime + 1); };
+  $('#clipSetIn').onclick  = setIn;
+  $('#clipSetOut').onclick = setOut;
+  $('#clipSplit').onclick  = splitHere;
+  $('#clipAdd').onclick    = addHere;
+  $('#clipDel').onclick    = delSeg;
+  $('#clipReset').onclick  = () => clipSel && (stopMontage(), setSegs(clipSel, []));
+  $('#clipMute').onclick   = () => { v.muted = !v.muted; clipUI(); };
+  $('#clipMontage').onclick = () => clipMont ? stopMontage() : startMontage();
+  $('#clipCanvas').onclick = stopMontage;
+  // réglette : clic = se placer (et choisir le segment) ; poignées = bords d'un segment
+  const tAt = e => { const r = tl.getBoundingClientRect(); return clamp((e.clientX - r.left)/r.width, 0, 1) * (clipSel?.duration || 0); };
+  let drag = null;
+  tl.addEventListener('pointerdown', e => {
+    const p = clipSel; if (!p || !p.duration) return;
+    stopMontage(); v.pause();
+    const h = e.target.closest('.h');
+    if (h){ drag = { k:+h.dataset.k, side:h.dataset.side, S:effSegs(p) }; clipK = drag.k; }
+    else {
+      drag = { seek:true };
+      const t = tAt(e), k = segAt(effSegs(p), t);
+      if (k >= 0 && k !== clipK){ clipK = k; clipLayout(); }
+      clipSeek(t);
+    }
+    tl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  tl.addEventListener('pointermove', e => {
+    const p = clipSel; if (!drag || !p) return;
+    const t = tAt(e);
+    if (drag.seek){ clipSeek(t); return; }
+    const S = drag.S, k = drag.k, D = p.duration;
+    if (drag.side === 'a') S[k].a = clamp(t, k ? S[k-1].b : 0, S[k].b - CLIP_MIN);
+    else S[k].b = clamp(t, S[k].a + CLIP_MIN, S[k+1] ? S[k+1].a : D);
+    setSegs(p, S.map(g => ({ ...g })), false);
+    clipSeek(drag.side === 'a' ? S[k].a : S[k].b);            // on voit l'image du point de coupe
+  });
+  const end = () => { if (drag && !drag.seek && clipSel) setSegs(clipSel, effSegs(clipSel)); drag = null; };
+  tl.addEventListener('pointerup', end); tl.addEventListener('pointercancel', end);
+  document.addEventListener('keydown', e => {
+    if (tab !== 'clips' || !clipSel || /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey) return;
+    const fr = 1/30, stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    if (e.code === 'Space'){ stop(); $('#clipPlay').click(); }
+    else if (e.code === 'ArrowLeft'){ stop(); stopMontage(); v.pause(); clipSeek(v.currentTime - (e.shiftKey ? fr : 1)); }
+    else if (e.code === 'ArrowRight'){ stop(); stopMontage(); v.pause(); clipSeek(v.currentTime + (e.shiftKey ? fr : 1)); }
+    else if (e.key === 'i' || e.key === 'I'){ stop(); setIn(); }
+    else if (e.key === 'o' || e.key === 'O'){ stop(); setOut(); }
+    else if (e.key === 's' || e.key === 'S'){ stop(); splitHere(); }
+    else if (e.key === 'm' || e.key === 'M'){ stop(); $('#clipMontage').click(); }
+    else if (e.key === 'Delete' || e.key === 'Backspace'){ stop(); delSeg(); }
+  }, true);
+})();
+
 function renderPhotoStrip(){
   const list = $('#photoList');
   if (!list) return;
   const e = activeEntry();
+  if (tab === 'clips') renderClipEditor();
   $('#stripTitle').textContent = e ? (e.title || e.gpxName) : 'Médias';
   $('#stripTitle').title = e ? e.gpxName : '';
   const near = photos.filter(p => { const l = photoLink(p); return l && l.near; }).length;
@@ -3475,7 +4487,7 @@ function renderPhotoStrip(){
     const icon = p.proposal ? '<span class="ic prop" title="Position proposée par l’heure, à valider"></span>'
                : p.lat == null ? '<span class="ic unk" title="Sans géolocalisation : cliquez pour la placer">?</span>'
                : `<span class="ic ${p.manual ? 'man' : 'geo'}" title="${p.manual ? 'Position placée à la main' : 'Position GPS de la photo'}"></span>`;
-    const vid = p.kind === 'video' ? `<span class="vid">▶ ${p.duration ? mmss(p.duration) : ''}</span>` : '';
+    const vid = p.kind === 'video' ? `<span class="vid">${isTrimmed(p) ? '✂' : '▶'} ${p.duration ? mmss(isTrimmed(p) ? clipLen(p) : p.duration) : ''}</span>` : '';
     el.innerHTML = `<div class="th${p.thumb || p.bad ? '' : ' wait'}">${p.thumb ? `<img alt="">` : '<img alt="" style="opacity:0">'}${icon}${vid}</div>
       <div class="meta"><span class="nm"></span>
         <label><input type="checkbox"> vidéo</label>
@@ -3600,7 +4612,7 @@ const slug = () => ($('#title').value.trim()||'trace').normalize('NFD').replace(
 
 async function exportVideo(){
   if (!track) { toast('Chargez une trace GPX.', true); return; }
-  if (tab === 'map') setTab('video');
+  if (tab !== 'video') setTab('video');
   setPlaying(false);
   cancelFlag=false; exporting=true;
   const fps=+$('#fps').value, bitrate=(+$('#bitrate').value)*1e6;
@@ -3728,7 +4740,7 @@ async function prefetchTiles(onProgress){
 }
 async function runPrefetch(){
   if (!track || exporting) return;
-  if (tab === 'map') setTab('video');
+  if (tab !== 'video') setTab('video');
   setPlaying(false);
   cancelFlag = false; exporting = true;                 // verrouille l'aperçu pendant le parcours
   const t0 = performance.now();
@@ -3799,8 +4811,8 @@ function syncLabels(){
   $('#durV').textContent    = $('#dur').value+' s';
   $('#exagV').textContent   = (+$('#exag').value).toFixed(1)+'×';
 }
-const PERSIST = ['title','subtitle','accent','units','showProfile','showGain','showCompass','showMinimap','trackWidth','prefetchExport',
-                 'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','clipMax','basemap','terrain','exag',
+const PERSIST = ['title','subtitle','accent','units','showProfile','showGain','showCompass','showMinimap','showRoad','trackWidth','prefetchExport',
+                 'photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','photoClock','basemap','terrain','exag',
                  'zoom','pitch','anchor','ahead','smooth','inertia','maxrot','freedom',
                  'dur','intro','outro','pace','fps','bitrate'];
 function saveSettings(){
@@ -3854,10 +4866,10 @@ const onChange = (ids, fn) => ids.forEach(id => $('#'+id).addEventListener('inpu
   syncLabels(); fn && fn(); saveSettings(); if (!exporting) renderPreview();
 }));
 onChange(['title','subtitle','endSubtitle'], ()=>{ rememberTrackFields(); renderTrackList(); });
-onChange(['showProfile','showCompass','showMinimap','prefetchExport']);
+onChange(['showProfile','showCompass','showMinimap','showRoad','prefetchExport']);
 onChange(['showGain'], () => { if (track) showTrackInfo(); });
 onChange(['trackWidth'], applyTrackWidth);
-onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle','clipMax'], refreshPhotos);
+onChange(['photoDur','photoMaxDist','photoSlow','showPhotos','photoStyle'], refreshPhotos);
 onChange(['photoClock']);
 onChange(['accent'], ()=>{ refreshAccent(); renderWpList(); if (editing) refreshMarkers(); });
 onChange(['pitch','anchor']);
@@ -3875,7 +4887,7 @@ $('#scrub').addEventListener('input', e=>{
   setPlaying(false); curT = (+e.target.value/1000)*TL.total; renderPreview();
 });
 document.addEventListener('keydown', e=>{
-  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  if (tab === 'clips' || /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
   if (e.code==='Space'){ e.preventDefault(); setPlaying(!playing); }
   if (e.code==='ArrowLeft'){ setPlaying(false); curT=Math.max(0,curT-1); renderPreview(); }
   if (e.code==='ArrowRight'){ setPlaying(false); curT=Math.min(TL.total,curT+1); renderPreview(); }
@@ -3909,6 +4921,8 @@ $('#clearPhotos').onclick = () => {
   refreshPhotos(); renderTrackList();
   toast('Médias de la trace retirés (les positions placées à la main restent mémorisées).');
 };
+$('#roadHere').onclick = addRoadHere;
+$('#roadDetect').onclick = detectRoads;
 $('#addHere').onclick = ()=>{
   if (!track) { toast('Chargez d’abord une trace GPX.', true); return; }
   const f = frameAt(curT);
@@ -3925,6 +4939,8 @@ $('#endName').addEventListener('input',  ()=> syncEndpoint('end'));
 /* ---- projet ---- */
 $('#saveProject').onclick = saveProjectFlow;
 $('#openProject').onclick = openProjectFlow;
+$('#reopenProject').onclick = reopenLastProject;
+updateReopen();
 $('#projectFile').addEventListener('change', e=>{
   if (e.target.files.length) loadFiles(e.target.files);
   e.target.value='';

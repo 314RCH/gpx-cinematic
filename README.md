@@ -56,6 +56,7 @@ Les traces apparaissent dans une liste ; un clic rend une trace **active**.
   avec la trace active, les points de passage (déplaçables) et les photos ;
   à droite, un bandeau vertical des vignettes. « 🖈 Placer sur la carte »
   ouvre cet onglet en mode ajout de points.
+- **✂ Vidéos** : découpe des clips de la trace active (voir plus bas).
 
 ## Photos et vidéos
 
@@ -71,8 +72,10 @@ sous-dossier par jour ou par GPX.
 - **Vidéos** : mp4, mov, m4v, webm (HEVC d'iPhone compris sous Chrome/Safari
   macOS). Position et date lues dans les métadonnées QuickTime
   (`com.apple.quicktime.location.ISO6709` ou `©xyz`, date avec fuseau), en ne
-  lisant que l'en-tête du fichier. Dans la vidéo, le clip est joué pendant
-  l'arrêt du point, plafonné par **Vidéo max. (s)** (12 s par défaut). À
+  lisant que l'en-tête du fichier. Dans la vidéo, le clip est joué en entier
+  (ou tel que monté dans l'onglet ✂ Vidéos) pendant l'arrêt du point, sans
+  limite de durée. La légende indique où en est la lecture
+  (« ▶ 0:04 / 0:12 »), avec une barre d'avancement au bas du clip. À
   l'export, chaque image est calée exactement sur l'instant du clip. Le son
   n'est pas repris.
 
@@ -144,23 +147,60 @@ proposition se valide (✓) ou se rejette (✗), ou toutes d'un coup.
 
 - **Mise en avant** (par défaut) : la photo s'envole de sa sphère sur la carte
   jusqu'au grand format centré ; la carte se floute et s'assombrit derrière,
-  les indicateurs s'effacent ; la photo zoome lentement (Ken Burns), avec sa
-  date et son kilométrage incrustés. Le point s'arrête presque le temps de la
-  photo. Les photos d'un même groupe s'enchaînent en fondu (« 2 / 4 »), puis
+  les indicateurs s'effacent ; la photo zoome lentement (Ken Burns). La
+  légende (date, kilométrage, temps d'une vidéo, « 2 / 4 ») est placée
+  **sous** l'image, sur une plaque sombre : sur une ligne sous une image
+  large, sur deux lignes centrées sous une image étroite (portrait), jamais
+  par-dessus l'image. Les photos d'un même groupe s'enchaînent en fondu, puis
   la dernière retourne à sa sphère.
-- **Encadré discret** : la photo en haut à droite, façon tirage, pendant que
-  le point ralentit.
+- **Encadré discret** : la photo en haut à droite, façon tirage, légende
+  dessous ; le tirage garde une largeur minimale pour qu'une photo en
+  portrait ait la place de sa légende (sur deux lignes au besoin).
 
 Dans les deux cas, chaque photo retenue a une sphère sur la carte à son
 emplacement et un point sur la mini-carte.
 
-**Ralentissement** : les photos proches (moins de max(150 m, 2 % de la trace)
-entre deux photos) forment un groupe. Chaque groupe de n photos ajoute
-≈ n × durée par photo × 0,85 s au parcours, réparti autour de la zone par une
-courbe douce : le point décélère, traverse lentement la zone pendant que les
-photos défilent, puis réaccélère. Sur la trace de test, 3 photos à Plan Lachat
-font passer le point de 266 m/s à ~50 m/s. La durée de la vidéo augmente
-d'autant ; la case « Ralentir le point aux photos » désactive l'effet.
+**Arrêt du point** : en arrivant sur une photo ou une vidéo, le point freine
+franchement (≈ 0,8 s) et s'arrête sur place. Il ne repart qu'une fois
+l'affichage terminé : durée par photo écoulée, ou vidéo lue jusqu'au bout
+(ou son montage), envol et retour de la photo compris. Il
+réaccélère ensuite en douceur. Les médias très proches (moins de 150 m, ou
+moins d'une seconde de parcours d'écart) forment un groupe : un seul arrêt,
+au premier média, pendant lequel ils s'enchaînent. La durée de la vidéo
+augmente d'autant. Décochez « Arrêter le point pendant les photos et vidéos »
+pour que les médias défilent sans arrêt, pendant le passage du point.
+
+### Monter les vidéos (onglet ✂ Vidéos)
+
+À gauche, les vidéos de la trace active (durée du montage, nombre de
+segments, km ou état : non placée, exclue, hors trace). À droite, le lecteur
+de l'éditeur (avec le son, que la vidéo exportée n'a pas ; 🔇/🔊) et une
+réglette illustrée d'images du clip.
+
+Un clip peut garder **plusieurs segments**, joués dans l'ordre :
+- cliquer sur la réglette pour se placer (et sélectionner le segment qui s'y
+  trouve) ; glisser les **poignées jaunes** pour ajuster le début ou la fin
+  d'un segment, l'image du point de coupe s'affiche ;
+- **⟦ Début ici** / **Fin ici ⟧** (touches **I** / **O**) : bord du segment
+  à la position courante ;
+- **✂ Couper ici** (**S**) : divise le segment en deux ; **🗑 Segment**
+  (**Suppr**) retire le segment sélectionné. Couper deux fois puis supprimer
+  le morceau du milieu enlève un passage ;
+- **✚ Segment ici** : nouveau segment de 4 s à partir de la position
+  courante, hors des segments existants ;
+- **↺ Tout** : revient au clip entier.
+
+Sous la réglette, la liste des segments et, entre deux segments, le
+**raccord** : coupe franche, fondu enchaîné, glissé (l'image suivante pousse
+la précédente), fondu au noir, fondu au blanc, flou. Leur durée se règle
+dans « Fondus » (0,8 s par défaut). **▶ Montage** (**M**) joue le résultat
+tel qu'il apparaîtra dans la vidéo. Espace = lecture/pause du fichier,
+← → = ±1 s, ⇧← ⇧→ = ±1 image.
+
+Dans la vidéo, le point reste arrêté pendant tout le montage. Deux lecteurs
+se relaient sur le même fichier : pendant que l'un joue un segment, l'autre
+attend déjà calé sur le suivant, ce qui donne des coupes nettes et permet
+les fondus enchaînés.
 
 ## Projet
 
@@ -182,6 +222,12 @@ replay/
   GPX (`20260816` ↔ `20260816.gpx`). Un dossier sans projet mais contenant
   des GPX devient un nouveau projet. On peut aussi y glisser-déposer le
   dossier.
+- **Dossier par défaut** : le navigateur ne peut pas viser un chemin
+  (`/Users/…/replay`) de lui-même, mais il retient le dernier dossier de
+  projet ouvert ou enregistré. 📂 Ouvrir démarre alors dans ce dossier, et un
+  bouton **↻ Rouvrir « replay »** le rouvre en un clic, sans passer par le
+  sélecteur (Chrome demande juste de confirmer l'accès ; choisir « Autoriser
+  à chaque visite » évite même cette confirmation).
 - **GPX modifiés** : les fichiers `.gpx` présents dans le dossier du projet
   (par exemple `replay/gpx/`) font foi. À l'ouverture, une trace dont le
   fichier a changé est mise à jour : points de passage replacés sur la
@@ -194,7 +240,8 @@ replay/
   y sont notés en chemins relatifs.
 - Contenu : traces GPX, titres, sous-titres, durées, points de passage (nom,
   position exacte, couleur), départ/arrivée, réglages, trace active, et pour
-  chaque média sa position placée à la main et son choix d'inclusion. Les
+  chaque média sa position placée à la main, son choix d'inclusion et, pour
+  une vidéo, son montage (segments, raccords, durée des fondus). Les
   fichiers photo/vidéo eux-mêmes restent dans leurs dossiers.
 - L'ouverture et l'enregistrement dans un dossier nécessitent Chrome ou Edge.
   Ailleurs : ouverture d'un fichier `.json`, enregistrement par
@@ -227,6 +274,34 @@ du tronçon en cours s'applique aussi au repère de position, à la distance
 affichée, au remplissage du profil altimétrique, au triangle de cap réel de la
 rose des vents et à la mini-carte. Elle est conservée
 dans le projet `.json`.
+
+## Routes
+
+Sous la mini-carte, un cartouche indique la route suivie : le numéro dans un
+panneau (couleur selon le préfixe : A et N rouge, D jaune, E vert, M bleu
+roi, autres numéros bleu), suivi du nom. Au changement de route, l'ancien
+cartouche s'efface pendant que le nouveau apparaît. Case **Route empruntée**
+dans Habillage.
+
+Section **Routes** du panneau :
+- chaque ligne donne la route suivie **à partir de ce km**, jusqu'à la ligne
+  suivante. Placez la tête de lecture là où la route change, puis
+  **+ À la position** : une ligne est créée à ce km, il reste à taper le nom.
+  Le km se corrige à la main, ▸ amène la tête de lecture au début de la
+  route ;
+- écrivez `1 · Hringvegur` ou `D902 · Col du Galibier` : ce qui précède le
+  « · » s'affiche dans le panneau s'il ressemble à un numéro de route ; sinon
+  le nom s'affiche seul, avec un pictogramme de route. Un nom vide n'affiche
+  rien sur ce tronçon (piste, hors route…) ;
+- **🛣 Détecter (OSM)** propose la liste d'après OpenStreetMap : la trace est
+  envoyée par morceaux au service Overpass (overpass-api.de), chaque point
+  est rattaché à la voie la plus proche orientée dans le même sens, et les
+  tronçons de moins de 400 m (carrefours, ponts) sont gommés. Compter
+  quelques secondes pour 10 km (≈ 20 s pour 80 km). Le résultat se corrige
+  ensuite librement.
+
+Les routes sont propres à chaque trace et enregistrées dans le projet. Si le
+GPX est mis à jour, chaque début de route est replacé d'après sa position.
 
 ## Chiffres affichés
 
@@ -302,7 +377,13 @@ l'export image par image soit identique à l'aperçu.
   images, l'application parcourt la trajectoire de la caméra, relève les
   tuiles dont chaque vue aura besoin et les télécharge en parallèle dans un
   cache en mémoire. Le bouton **⚡ Précharger les tuiles** fait la même chose à
-  la demande, pour une lecture fluide dans l'aperçu.
+  la demande.
+- **En lecture** (▶), le même parcours se fait en tâche de fond, jusqu'à
+  20 s devant la tête de lecture ; les photos et vidéos à venir sont aussi
+  décodées d'avance. Si le réseau ne suit pas, la lecture marque une pause
+  (« Chargement des tuiles… ») le temps d'avoir 2,5 s d'avance, plutôt que de
+  montrer une carte floue. Sur la trace de test, réseau à froid : 12 fois
+  moins de tuiles manquantes à l'écran.
 - Mesuré sur la trace de test : ~145 ms par image sans préchargement,
   **~45–60 ms** après. Une vidéo de 54 s à 30 i/s (1 620 images) sort en
   **1 min 41**, préchargement compris, au lieu d'environ 4 min 30.
