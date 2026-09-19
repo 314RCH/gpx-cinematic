@@ -6,8 +6,15 @@ navigateur.
 
 ## Lancer
 
+**En ligne** : <https://pierrebressy.github.io/gpx2mp4/> (GitHub Pages, rien à
+installer ; les traces, photos et vidéos restent sur votre ordinateur, rien
+n'est envoyé nulle part hormis la trace pour la détection des routes
+OpenStreetMap, sur demande).
+
+**En local** :
+
 ```bash
-cd /Users/pierre/Projets/gpx2mp4 && python3 -m http.server 5178
+cd gpx2mp4 && python3 -m http.server 5178
 ```
 
 puis ouvrir <http://localhost:5178/index.html>.
