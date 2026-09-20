@@ -168,6 +168,13 @@ be accepted (✓) or rejected (✗), or all at once.
   caption below; the print keeps a minimum width so that a portrait photo has
   room for its caption (on two lines if needed).
 
+**Order inside a stop**: media shown at the same place form a group
+(“2 / 4” in the caption). In the media panel, each of them carries its rank
+with ▲ ▼ to move it earlier or later in the group; the panel lists them in
+that same order. Without a chosen order, a group follows distance, then
+date, then file name. The order is saved with the media (browser and
+project).
+
 In both cases, each selected photo has a sphere on the map at its location
 and a dot on the minimap.
 

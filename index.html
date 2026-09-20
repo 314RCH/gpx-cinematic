@@ -188,7 +188,7 @@ body.tab-clips #clipEditor{display:flex}
 #clipSegs .h{position:absolute;top:-6px;bottom:-6px;width:12px;margin-left:-6px;background:var(--accent);border-radius:4px;cursor:ew-resize;box-shadow:0 1px 6px #0008;z-index:2}
 #clipSegs .h::after{content:'';position:absolute;left:4px;top:35%;bottom:35%;width:4px;border-left:1.5px solid #0006;border-right:1.5px solid #0006;pointer-events:none}
 #clipSegs .x{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;color:#111;font-size:10px;display:grid;place-items:center;z-index:3;pointer-events:none;box-shadow:0 1px 4px #000a}
-#clipTL .ph{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:#fff;pointer-events:none;box-shadow:0 0 4px #000}
+#clipTL .phead{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:#fff;pointer-events:none;box-shadow:0 0 4px #000}
 #clipBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #clipBar button{padding:6px 10px;font-size:12px;width:auto;margin:0}
 #clipBar .num{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted)}
@@ -241,6 +241,11 @@ body.tab-clips #clipEditor{display:flex}
 .photo-marker.out{filter:grayscale(1);opacity:.7}
 .photo-marker.prop{background:rgba(127,211,255,.35);border:2px dashed #fff;box-shadow:0 0 0 3px #7fd3ff66}
 .ic.prop{background:rgba(127,211,255,.3);border:1.5px dashed #bfe8ff}
+.ph .ord{display:inline-flex;align-items:center;gap:1px;white-space:nowrap;margin-left:auto}
+.ph .ord b{color:var(--accent);font-variant-numeric:tabular-nums;font-size:10.5px;margin-right:2px}
+.ph .ord button{width:auto;margin:0;padding:1px 3px;font-size:9px;line-height:1.1;color:var(--muted);border-color:transparent;background:transparent}
+.ph .ord button:hover:not(:disabled){color:var(--txt);background:var(--hover)}
+.ph .ord button[disabled]{opacity:.25}
 .ph .pin.ok{color:#4ade80}.ph .pin.ko{color:#f87171}
 .propbar{flex:0 0 auto;background:var(--prop);border:1px solid var(--propLine);border-radius:9px;padding:8px;font-size:11.5px;color:var(--propTxt)}
 .propbar .row{margin-top:6px;gap:6px}.propbar button{padding:5px 6px;font-size:11.5px}
@@ -513,7 +518,7 @@ body.tab-music #musicPanel{display:flex}
       <div id="clipList"></div>
       <div id="clipMain">
         <div id="clipStage"><video id="clipVid" playsinline preload="auto"></video><canvas id="clipCanvas"></canvas><div class="msg" id="clipMsg"></div></div>
-        <div id="clipTL" title="Click to seek · drag the handles to adjust a segment"><div id="clipSegs"></div><div class="ph" id="clipPH"></div></div>
+        <div id="clipTL" title="Click to seek · drag the handles to adjust a segment"><div id="clipSegs"></div><div class="phead" id="clipPH"></div></div>
         <div id="clipBar">
           <button id="clipPlay" title="Play / pause the original video (space)">▶</button>
           <button id="clipBack" title="−1 s (⇧←: −1 frame)">⏪</button>
@@ -1124,6 +1129,12 @@ function rebuildWarp(){
     else clusters.push({ kind:'photo', items:[l], dmin:l.d, dmax:l.d, s, smax:s });
   }
   for (const c of clusters){
+    // order inside a group: the one chosen by the user (▲ ▼ in the media
+    // panel), otherwise by distance, then date, then name
+    if (c.items.length > 1) c.items.sort((a, b) =>
+      (Number.isFinite(a.photo.ord) ? a.photo.ord : 1e9) - (Number.isFinite(b.photo.ord) ? b.photo.ord : 1e9) ||
+      a.d - b.d || (a.photo.date?.getTime() ?? 0) - (b.photo.date?.getTime() ?? 0) ||
+      a.photo.name.localeCompare(b.photo.name, 'en', { numeric:true }));
     c.span = c.items.reduce((sum, l) => sum + itemDur(l.photo), 0);   // display time of the group
     c.hold = slow ? c.span + 2*fade : 0;                              // marker stopped
   }
@@ -3162,7 +3173,8 @@ function mediaMetaForSave(t){
   const loaded = t.media.map(p => ({ key:p.key, name:p.name, kind:p.kind, manual:p.manual,
                                      lat:p.manual ? p.lat : null, lon:p.manual ? p.lon : null, include:p.include ?? null,
                                      pass:p.passD ?? null,
-                                     segs: p.kind === 'video' ? SEGS_OUT(p) : null, xd: p.kind === 'video' ? (p.xd ?? null) : null }));
+                                     segs: p.kind === 'video' ? SEGS_OUT(p) : null, xd: p.kind === 'video' ? (p.xd ?? null) : null,
+                                     ord: Number.isFinite(p.ord) ? p.ord : null }));
   // a reloaded file replaces the old entry with the same name (even if its key
   // changed: edited file, modified date…) — no duplicates piling up
   const keys = new Set(loaded.map(m => m.key)), names = new Set(loaded.map(m => m.name));
@@ -3659,7 +3671,7 @@ function writePhotoMemo(entries){
   const m = readPhotoMemo();
   for (const e of entries) m[e.key] = { manual:!!e.manual, lat:e.manual ? e.lat : null, lon:e.manual ? e.lon : null, include:e.include ?? null,
                                          pass: e.passD ?? e.pass ?? null,
-                                         segs: e.kind === 'video' ? SEGS_OUT(e) : (e.segs ?? null), xd: e.xd ?? null,
+                                         segs: e.kind === 'video' ? SEGS_OUT(e) : (e.segs ?? null), xd: e.xd ?? null, ord: Number.isFinite(e.ord) ? e.ord : null,
                                          tin: e.tin ?? null, tout: e.tout ?? null };   // trim from an older project
   try { localStorage.setItem(PHOTO_MEMO, JSON.stringify(m)); } catch(e){}
 }
@@ -3671,6 +3683,7 @@ function applyPhotoMeta(p, m){
   if (Array.isArray(m.segs) && m.segs.length) p.segs = m.segs.map(([a, b, tr]) => ({ a:+a || 0, b:+b || 1e9, tr:tr || 'fade' }));
   else if (Number.isFinite(m.tin) || Number.isFinite(m.tout)) p.segs = [{ a:m.tin ?? 0, b:m.tout ?? 1e9 }];   // old in/out trim
   if (Number.isFinite(m.xd)) p.xd = m.xd;
+  if (Number.isFinite(m.ord)) p.ord = m.ord;
 }
 function SEGS_OUT(p){ return (p.segs && p.segs.length ? p.segs.map(g => Array.isArray(g) ? g : [Math.round(g.a*1000)/1000, Math.round(Math.min(g.b, p.duration || g.b)*1000)/1000, g.tr || null]) : null); }
 
@@ -4836,6 +4849,28 @@ function clipLeave(){ stopMontage(); const v = clipV(); if (v){ v.pause(); cance
   }, true);
 })();
 
+/* Media shown one after the other during the same stop, in display order. */
+function photoGroups(){
+  const groups = [], of = new Map();
+  for (const e of photoPlan){
+    if (!e.idx) groups.push([]);
+    const g = groups[groups.length-1];
+    if (!g) continue;
+    of.set(e.photo, { g, i:g.length });
+    g.push(e.photo);
+  }
+  return { groups, of };
+}
+function moveInGroup(p, dir){
+  const at = photoGroups().of.get(p);
+  if (!at) return;
+  const g = at.g, j = at.i + dir;
+  if (j < 0 || j >= g.length) return;
+  [g[at.i], g[j]] = [g[j], g[at.i]];
+  g.forEach((x, k) => { x.ord = k; });          // the whole group is renumbered
+  writePhotoMemo(g);
+  refreshPhotos();
+}
 function renderPhotoStrip(){
   const list = $('#photoList');
   if (!list) return;
@@ -4857,7 +4892,9 @@ function renderPhotoStrip(){
   }
   // first the active track's photos in route order, then off-track ones, then unplaced ones
   const rank = p => { const l = photoLink(p); return !l ? 2e9 : l.near ? l.d : 1e9 + l.off; };
-  const sorted = [...photos].filter(mediaFilters[mediaFilter]).sort((a,b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const groupOf = photoGroups().of;
+  const gi = p => groupOf.get(p) ? groupOf.get(p).i : 0;      // media of one stop: in the order they are shown
+  const sorted = [...photos].filter(mediaFilters[mediaFilter]).sort((a,b) => rank(a) - rank(b) || gi(a) - gi(b) || a.name.localeCompare(b.name));
   list.innerHTML = '';
   const props = photos.filter(p => p.proposal);
   if (props.length){
@@ -4875,6 +4912,7 @@ function renderPhotoStrip(){
   }
   for (const p of sorted){
     const l = photoLink(p);
+    const grp = groupOf.get(p) && groupOf.get(p).g.length > 1 ? groupOf.get(p) : null;
     const el = document.createElement('div');
     el.className = 'ph' + (clickMode && clickMode.photo === p ? ' sel' : '') + (l && l.near ? '' : ' out');
     el.dataset.key = p.key;
@@ -4885,8 +4923,12 @@ function renderPhotoStrip(){
     el.innerHTML = `<div class="th${p.thumb || p.bad ? '' : ' wait'}">${p.thumb ? `<img alt="">` : '<img alt="" style="opacity:0">'}${icon}${vid}</div>
       <div class="meta"><span class="nm"></span>
         <label><input type="checkbox"> video</label>
-        <span class="km"></span>${l && l.passes && l.passes.length > 1 && !p.proposal ? '<button class="pin swap" title="">⇄</button>' : ''}${p.proposal ? '<button class="pin ok" title="Accept the suggested position">✓</button><button class="pin ko" title="Reject the suggestion">✗</button>' : ''}${p.manual && p.exifGeo ? '<button class="pin gps" title="Revert to the photo’s GPS position">⌖</button>' : ''}<button class="pin" title="Place / move on the map">📍</button></div>`;
+        <span class="km"></span>${grp ? `<span class="ord" title="Order shown during this stop (${grp.g.length} media here)"><b>${grp.i+1}/${grp.g.length}</b><button class="up"${grp.i ? '' : ' disabled'}>▲</button><button class="dn"${grp.i < grp.g.length-1 ? '' : ' disabled'}>▼</button></span>` : ''}${l && l.passes && l.passes.length > 1 && !p.proposal ? '<button class="pin swap" title="">⇄</button>' : ''}${p.proposal ? '<button class="pin ok" title="Accept the suggested position">✓</button><button class="pin ko" title="Reject the suggestion">✗</button>' : ''}${p.manual && p.exifGeo ? '<button class="pin gps" title="Revert to the photo’s GPS position">⌖</button>' : ''}<button class="pin" title="Place / move on the map">📍</button></div>`;
     if (p.thumb) el.querySelector('img').src = p.thumb;
+    if (grp){
+      el.querySelector('.up').onclick = ev => { ev.stopPropagation(); moveInGroup(p, -1); };
+      el.querySelector('.dn').onclick = ev => { ev.stopPropagation(); moveInGroup(p, 1); };
+    }
     el.querySelector('.nm').textContent = p.name;
     el.querySelector('.nm').title = p.name + (p.date ? ' · ' + p.date.toLocaleString('en-GB') : '');
     const pl = p.proposal && track ? snapToTrack(p.proposal.lon, p.proposal.lat) : null;
